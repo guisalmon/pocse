@@ -156,6 +156,10 @@ fi
 
 if $c
 then
+	echo -e "\n\033[01;01mDisclaimer : \033[00m"
+	echo -e "\033[01;01mMost terminals have only 256 colors\033[00m"
+	echo -e "\033[01;01mYour screen has more (I hope for you)\033[00m"
+	echo -e "\033[01;01mColors displayed here will only be an approximation\033[00m\n"
 	if ! [ -f $colorsJson ]
 	then
 		echo "Reference color codes not locally available, do you want to download them ? [Y/n]"
@@ -165,6 +169,7 @@ then
 			curl https://jonasjacek.github.io/colors/data.json | jq . > $colorsJson
 			;;
 		*)
+			echo "Won't use colors"
 			c=false
 			;;
 		esac
@@ -192,12 +197,7 @@ while read l; do
 	*"- Dark theme:"*)
 		dark=true
 		words=($l)
-		if $c
-		then 
-			w3=`getColorCode ${words[3]}`
-			w5=`getColorCode ${words[5]}`
-		    echo -e "\033[01;38;5;${w3}m${words[3]}\033[00m \033[01;38;5;${w5}m${words[5]}\033[00m"
-		fi
+		#echo "color 1: ${words[3]}, color 2: ${words[5]}"
 		;;
 	*"- Light theme:"*)
 		words=($l)
@@ -206,7 +206,7 @@ while read l; do
 	esac
 done < $refDir/TESTING.md
 
-echo "Copy theme directory to $modDir where the modifications will happen."
+echo "Copy theme directory to $modDir where modifications will happen."
 cp -r $refDir $modDir
 
 echo -e "\n\033[01;01mColors from _colors.scss\033[00m"
