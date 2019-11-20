@@ -3,6 +3,7 @@
 resDir="res"
 colorCodes="$resDir/colorCodes"
 refDir='Pop_Theme_reference'
+modDir='Pop_Theme_modified'
 colorsJson="$resDir/colors.json"
 
 hexToRGB () {
@@ -204,4 +205,110 @@ while read l; do
 		;;
 	esac
 done < $refDir/TESTING.md
+
+echo "Copy theme directory to $modDir where the modifications will happen."
+cp -r $refDir $modDir
+
+echo -e "\n\033[01;01mColors from _colors.scss\033[00m"
+shellColors="/gnome-shell/src/gnome-shell-sass/_colors.scss"
+refDarkBase="#000000"
+refLightBase="#000000"
+refDarkBg="#000000"
+refLightBg="#000000"
+refDarkFg="#000000"
+refLightFg="#000000"
+
+while read l; do
+	words=($l)
+	case $l in
+	*'$base_color:'*)
+		refDarkBase=${words[5]#*#}
+		refDarkBase="#${refDarkBase:0:6}"
+		refLightBase=${words[4]#*#}
+		refLightBase="#${refLightBase:0:6}"
+		;;
+	*'$bg_color:'*)
+		refDarkBg=${words[5]#*#}
+		refDarkBg="#${refDarkBg:0:6}"
+		refLightBg=${words[4]#*#}
+		refLightBg="#${refLightBg:0:6}"
+		;;
+	*'$fg_color:'*)
+		refDarkFg=${words[5]#*#}
+		refDarkFg="#${refDarkFg:0:6}"
+		refLightFg=${words[4]#*#}
+		refLightF="#${refLightFg:0:6}"
+		;;
+	esac
+done < $refDir$shellColors
+
+displayColors () {
+	codeLight=`getColorCode $2`
+	codeDark=`getColorCode $3`
+	echo "$1 \t \033[01;38;5;${codeLight}m$2\033[00m \033[01;38;5;${codeDark}m$3\033[00m"
+}
+
+echo -e '\t \t \t Light \t Dark'
+echo -e `displayColors "Base \t \t" $refLightBase $refDarkBase`
+echo -e `displayColors "Background \t" $refLightBg $refDarkBg`
+echo -e `displayColors "Foreground \t" $refLightFg $refDarkFg`
+
+echo -e "\n\033[01;01mColors from _pop_os_colors.scss\033[00m"
+popOsColors="/gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss"
+refOrangeBL=#000000
+refOrangeHL=#000000
+refOrangeTL=#000000
+refOrangeBD=#000000
+refOrangeHD=#000000
+refOrangeTD=#000000
+refBlueBL=#000000
+refBlueHL=#000000
+refBlueTL=#000000
+refBlueBD=#000000
+refBlueHD=#000000
+refBlueTD=#000000
+
+ghpoc () {
+	li=${1#*#}
+	echo "#${li:0:6}"
+}
+
+while read l; do
+	words=($l)
+	case $l in
+	*'$orange:'*)
+		refOrangeBL=`ghpoc ${words[2]}`
+		refOrangeBD=`ghpoc ${words[3]}`
+		;;
+	*'$highlights_orange:'*)
+		refOrangeHL=`ghpoc ${words[2]}`
+		refOrangeHD=`ghpoc ${words[3]}`
+		;;
+	*'$text_orange:'*)
+		refOrangeTL=`ghpoc ${words[2]}`
+		refOrangeTD=`ghpoc ${words[3]}`
+		;;
+	*'$blue:'*)
+		refBlueBL=`ghpoc ${words[2]}`
+		refBlueBD=`ghpoc ${words[3]}`
+		;;
+	*'$highlights_blue:'*)
+		refBlueHL=`ghpoc ${words[2]}`
+		refBlueHD=`ghpoc ${words[3]}`
+		;;
+	*'$text_blue:'*)
+		refBlueTL=`ghpoc ${words[2]}`
+		refBlueTD=`ghpoc ${words[3]}`
+		;;
+	esac
+done < $refDir$popOsColors
+
+echo -e '\t \t \t Light \t Dark'
+echo -e `displayColors "Orange \t\t" $refOrangeBL $refOrangeBD`
+echo -e `displayColors "Orange highlights" $refOrangeHL $refOrangeHD`
+echo -e `displayColors "Orange text\t" $refOrangeTL $refOrangeTD`
+echo -e `displayColors "Blue \t\t" $refBlueBL $refBlueBD`
+echo -e `displayColors "Blue highlights" $refBlueHL $refBlueHD`
+echo -e `displayColors "Blue text\t" $refBlueTL $refBlueTD`
+
 
