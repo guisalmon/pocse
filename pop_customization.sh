@@ -381,5 +381,5 @@ display () {
 
 display | column -t
 
-# Done displayed parsed colors
+# Done displaying parsed colors
 
