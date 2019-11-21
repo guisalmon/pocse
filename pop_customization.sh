@@ -215,7 +215,7 @@ while read l; do
 	esac
 done < $refDir/TESTING.md
 
-echo -e "Copy theme directory to $modDir where modifications will happen.\n"
+echo -e "Reference theme directory copied to $modDir where modifications will happen.\n"
 cp -r $refDir $modDir
 
 if $c
@@ -387,7 +387,7 @@ display | column -t
 # Done displaying parsed colors
 
 if $c
-then echo -e "\n\033[01;01mNow let's extract colors used in gtk Pop OS theme\033[00m\n"
+then echo -e "\n\033[01;01mNow let's extract colors used in gtk Pop OS theme and display only those different from gnome theme\033[00m\n"
 else echo -e "\nNow let's extract colors used in gtk Pop OS theme and display only those different from gnome theme\n"
 fi
 
