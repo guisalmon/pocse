@@ -218,34 +218,22 @@ done < $refDir/TESTING.md
 echo -e "Copy theme directory to $modDir where modifications will happen.\n"
 cp -r $refDir $modDir
 
+echo -e "\033[01;01mLet's extract colors used in gnome-shell Pop OS theme\033[00m\n"
+
+declare -A colorMap
+declare -a colorList
+colorIndex=0
+placeholder="[_____]"
+
 formatHex () {
 	li=${1#*#}
 	echo "#${li:0:6}"
 }
 
-formatColors () {
-	if $c
-	then
-		codeLight=`getColorCode $2`
-		codeDark=`getColorCode $3`
-		echo "$1 \033[01;38;5;${codeLight}m$2\033[00m \033[01;38;5;${codeDark}m$3\033[00m"
-	else
-		echo "$1 $2 $3"
-	fi
-}
-
 # Parsing colors from /gnome-shell/src/gnome-shell-sass/_colors.scss 
-
-echo -e "\033[01;01mLet's extract colors used in gnome-shell theme\033[00m\n"
 
 shellColors="/gnome-shell/src/gnome-shell-sass/_colors.scss"
 baseColorsArray=("\$base_color" "\$bg_color" "\$fg_color")
-declare -A baseColorsMap
-for color in ${baseColorsArray[*]}
-do
-	baseColorsMap[$color,0]="#000000"
-	baseColorsMap[$color,1]="#000000"
-done
 
 while read l; do
 	words=($l)
@@ -253,23 +241,13 @@ while read l; do
 	do
 		if [[ $l == *"$color:"* ]]
 		then
-			baseColorsMap[$color,0]=`formatHex ${words[4]}`
-			baseColorsMap[$color,1]=`formatHex ${words[5]}`
+			colorList[$colorIndex]=$color
+			(( colorIndex++ ))
+			colorMap[$color,0]=`formatHex ${words[4]}`
+			colorMap[$color,1]=`formatHex ${words[5]}`
 		fi
 	done
 done < $refDir$shellColors
-
-displayBaseColors () {
-	size=${#baseColorsMap[@]}
-	count=1
-	for color in ${baseColorsArray[*]}
-	do
-		echo -ne "Parsing base color code $count of $size"\\r 1>&2
-		echo -e `formatColors "$color" ${baseColorsMap[$color,0]} ${baseColorsMap[$color,1]}`
-		(( count++ ))	
-		(( count++ ))
-	done
-}
 
 # End of color parsing from /gnome-shell/src/gnome-shell-sass/_colors.scss 
 
@@ -278,26 +256,7 @@ displayBaseColors () {
 popOsColors="/gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss"
 popColorsArray=("orange" "blue" "green" "red" "yellow" "purple" "pink" "indigo")
 variants=("\$" "\$highlights_" "\$text_")
-warmGreysArray=("#000000" "#000000" "#000000")
 uiColorsArray=("_ui_100" "_ui_300" "_ui_500" "_ui_700" "_ui_900")
-gdmGrey="#000000"
-
-declare -A popColorsMap
-for color in ${popColorsArray[*]}
-do
-	for variant in ${variants[*]}
-	do 
-		popColorsMap[$color,$variant,0]="#000000"
-		popColorsMap[$color,$variant,1]="#000000"
-	done
-done
-
-declare -A uiColorsMap
-for color in ${uiColorsArray[*]}
-do
-	uiColorsMap[$color,0]="#000000"
-	uiColorsMap[$color,1]="#000000"
-done
 
 extractPopColors () {
 	words=($1)
@@ -307,8 +266,10 @@ extractPopColors () {
 		do
 			if [[ $1 == *"$variant$color"* ]]
 			then
-				popColorsMap[$color,$variant,0]=`formatHex ${words[2]}`
-				popColorsMap[$color,$variant,1]=`formatHex ${words[3]}`
+				colorList[$colorIndex]=$variant$color
+				(( colorIndex++ ))
+				colorMap[$variant$color,0]=`formatHex ${words[2]}`
+				colorMap[$variant$color,1]=`formatHex ${words[3]}`
 			fi
 		done
 	done
@@ -317,14 +278,16 @@ extractPopColors () {
 extractWarmGreys () {
 	words=($1)
 	case $1 in
-	*"\$light_warm_grey"*)
-		warmGreysArray[0]=`formatHex ${words[1]}`
+	*"\$light_warm_grey:"*)
+		colorList[$colorIndex]="\$warm_grey"
+		(( colorIndex++ ))
+		colorMap["\$warm_grey",0]=`formatHex ${words[1]}`
 		;;
-	*"\$dark_warm_grey"*)
-		warmGreysArray[1]=`formatHex ${words[1]}`
+	*"\$dark_warm_grey:"*)
+		colorMap["\$warm_grey",1]=`formatHex ${words[1]}`
 		;;
-	*"\$warm_grey"*)
-		warmGreysArray[2]=`formatHex ${words[1]}`
+	*"\$warm_grey:"*)
+		colorMap["\$warm_grey",2]=`formatHex ${words[1]}`
 		;;
 	esac
 }
@@ -335,11 +298,15 @@ extractUIColors () {
 	do
 		if [[ $1 == *"\$light$color:"* ]]
 		then
-			uiColorsMap[$color,0]=`formatHex ${words[1]}`
+			colorList[$colorIndex]="\$light$color"
+			(( colorIndex++ ))
+			colorMap["\$light$color",2]=`formatHex ${words[1]}`
 		fi
 		if [[ $1 == *"\$dark$color:"* ]]
 		then
-			uiColorsMap[$color,1]=`formatHex ${words[1]}`
+			colorList[$colorIndex]="\$dark$color"
+			(( colorIndex++ ))
+			colorMap["\$dark$color",2]=`formatHex ${words[1]}`
 		fi
 	done
 }
@@ -348,56 +315,9 @@ extractGDMGrey () {
 	words=($1)
 	if [[ $1 == *"\$gdm_grey:"* ]]
 	then
-		gdmGrey=`formatHex ${words[1]}`
-	fi
-}
-
-displayPopColors () {	
-	size=${#popColorsMap[@]}
-	count=1
-	for color in ${popColorsArray[*]}
-	do
-		for variant in ${variants[*]}
-		do
-			echo -ne "Parsing pop color code $count of $size"\\r 1>&2
-			echo -e `formatColors "$variant$color" ${popColorsMap[$color,$variant,0]} ${popColorsMap[$color,$variant,1]}`
-			(( count++ ))
-			(( count++ ))
-		done
-	done
-}
-
-displayWarmGreys () {
-	if $c
-	then
-		codeLight=`getColorCode ${warmGreysArray[0]}`
-		codeDark=`getColorCode ${warmGreysArray[1]}`
-		codeNeutral=`getColorCode ${warmGreysArray[2]}`
-		echo -e "\$warm_grey \033[01;38;5;${codeLight}m${warmGreysArray[0]}\033[00m \033[01;38;5;${codeDark}m${warmGreysArray[1]}\033[00m \033[01;38;5;${codeNeutral}m${warmGreysArray[2]}\033[00m"
-	else
-		echo "\$warm_grey ${warmGreysArray[0]} ${warmGreysArray[1]} ${warmGreysArray[2]}"
-	fi
-}
-
-displayUIColors () {
-	size=${#uiColorsMap[@]}
-	count=1
-	for color in ${uiColorsArray[*]}
-	do
-		echo -ne "Parsing UI color code $count of $size"\\r 1>&2
-		echo -e `formatColors "$color" ${uiColorsMap[$color,0]} ${uiColorsMap[$color,1]}`
-			(( count++ ))
-			(( count++ ))
-	done
-}
-
-displayGDMColor () {
-	if $c
-	then
-		codeNeutral=`getColorCode $gdmGrey`
-		echo -e "\$gdm_grey [_____] [_____] \033[01;38;5;${codeNeutral}m$gdmGrey\033[00m"
-	else
-		echo "\$gdm_grey \t \t $gdmGrey"
+		colorList[$colorIndex]="\$gdm_grey"
+		(( colorIndex++ ))
+		colorMap["\$gdm_grey",2]=`formatHex ${words[1]}`
 	fi
 }
 
@@ -411,16 +331,55 @@ done < $refDir$popOsColors
 
 # End of color parsing from /gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss 
 
+# Display colors parsed from reference theme
+
+formatColor () {
+	if $c
+	then
+		if [[ ${#1} -eq 7 && ${1:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+		then 
+			color="\033[01;38;5;`getColorCode $1`m$1\033[00m"
+		else 
+			color="\033[00;08m$placeholder\033[00m"
+		fi
+	else
+		if [[ ${#1} -eq 7 && ${1:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+		then 
+			color=$1
+		else 
+			color="$placeholder"
+		fi
+	fi
+	echo $color
+}
+
+formatColors () {
+	echo "$1 `formatColor $2` `formatColor $3` `formatColor $4`"
+}
+
 display () {
-	echo -e 'Colors Light Dark Neutral'	
-	echo -e "\033[01;01m_colors.scss\033[00m"
-	displayBaseColors
-	echo -e "\033[01;01m_pop_os_colors.scss\033[00m"
-	displayPopColors
-	displayWarmGreys
-	displayUIColors
-	displayGDMColor
+	echo -e 'Colors Light Dark Neutral'
+	declare -a validColors	
+	size=${#colorMap[@]}
+	count=0
+	for color in ${colorList[*]} 
+	do
+		for i in {0..2}
+		do
+			if [[ ${#colorMap[$color,$i]} -eq 7 && ${colorMap[$color,$i]:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+			then 
+				validColors[$i]=${colorMap[$color,$i]}
+				(( count++ ))
+			else 
+				validColors[$i]=$placeholder
+			fi
+		done
+		echo -ne "Parsing pop color code $count of $size"\\r 1>&2
+		echo -e `formatColors "$color" "${validColors[0]}" "${validColors[1]}" "${validColors[2]}"`
+	done 
 }
 
 display | column -t
+
+# Done displayed parsed colors
 
