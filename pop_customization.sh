@@ -218,11 +218,14 @@ done < $refDir/TESTING.md
 echo -e "Copy theme directory to $modDir where modifications will happen.\n"
 cp -r $refDir $modDir
 
-echo -e "\033[01;01mLet's extract colors used in gnome-shell Pop OS theme\033[00m\n"
+if $c
+then echo -e "\033[01;01mLet's extract colors used in gnome-shell Pop OS theme\033[00m\n"
+else echo -e "Let's extract colors used in gnome-shell Pop OS theme\n"
+fi
 
-declare -A colorMap
-declare -a colorList
-colorIndex=0
+declare -A gnomeColorMap
+declare -a gnomeColorList
+gnomeColorIndex=0
 placeholder="[_____]"
 
 formatHex () {
@@ -241,10 +244,10 @@ while read l; do
 	do
 		if [[ $l == *"$color:"* ]]
 		then
-			colorList[$colorIndex]=$color
-			(( colorIndex++ ))
-			colorMap[$color,0]=`formatHex ${words[4]}`
-			colorMap[$color,1]=`formatHex ${words[5]}`
+			gnomeColorList[$gnomeColorIndex]=$color
+			(( gnomeColorIndex++ ))
+			gnomeColorMap[$color,0]=`formatHex ${words[4]}`
+			gnomeColorMap[$color,1]=`formatHex ${words[5]}`
 		fi
 	done
 done < $refDir$shellColors
@@ -266,10 +269,10 @@ extractPopColors () {
 		do
 			if [[ $1 == *"$variant$color"* ]]
 			then
-				colorList[$colorIndex]=$variant$color
-				(( colorIndex++ ))
-				colorMap[$variant$color,0]=`formatHex ${words[2]}`
-				colorMap[$variant$color,1]=`formatHex ${words[3]}`
+				gnomeColorList[$gnomeColorIndex]=$variant$color
+				(( gnomeColorIndex++ ))
+				gnomeColorMap[$variant$color,0]=`formatHex ${words[2]}`
+				gnomeColorMap[$variant$color,1]=`formatHex ${words[3]}`
 			fi
 		done
 	done
@@ -279,15 +282,15 @@ extractWarmGreys () {
 	words=($1)
 	case $1 in
 	*"\$light_warm_grey:"*)
-		colorList[$colorIndex]="\$warm_grey"
-		(( colorIndex++ ))
-		colorMap["\$warm_grey",0]=`formatHex ${words[1]}`
+		gnomeColorList[$gnomeColorIndex]="\$warm_grey"
+		(( gnomeColorIndex++ ))
+		gnomeColorMap["\$warm_grey",0]=`formatHex ${words[1]}`
 		;;
 	*"\$dark_warm_grey:"*)
-		colorMap["\$warm_grey",1]=`formatHex ${words[1]}`
+		gnomeColorMap["\$warm_grey",1]=`formatHex ${words[1]}`
 		;;
 	*"\$warm_grey:"*)
-		colorMap["\$warm_grey",2]=`formatHex ${words[1]}`
+		gnomeColorMap["\$warm_grey",2]=`formatHex ${words[1]}`
 		;;
 	esac
 }
@@ -298,15 +301,15 @@ extractUIColors () {
 	do
 		if [[ $1 == *"\$light$color:"* ]]
 		then
-			colorList[$colorIndex]="\$light$color"
-			(( colorIndex++ ))
-			colorMap["\$light$color",2]=`formatHex ${words[1]}`
+			gnomeColorList[$gnomeColorIndex]="\$light$color"
+			(( gnomeColorIndex++ ))
+			gnomeColorMap["\$light$color",2]=`formatHex ${words[1]}`
 		fi
 		if [[ $1 == *"\$dark$color:"* ]]
 		then
-			colorList[$colorIndex]="\$dark$color"
-			(( colorIndex++ ))
-			colorMap["\$dark$color",2]=`formatHex ${words[1]}`
+			gnomeColorList[$gnomeColorIndex]="\$dark$color"
+			(( gnomeColorIndex++ ))
+			gnomeColorMap["\$dark$color",2]=`formatHex ${words[1]}`
 		fi
 	done
 }
@@ -315,9 +318,9 @@ extractGDMGrey () {
 	words=($1)
 	if [[ $1 == *"\$gdm_grey:"* ]]
 	then
-		colorList[$colorIndex]="\$gdm_grey"
-		(( colorIndex++ ))
-		colorMap["\$gdm_grey",2]=`formatHex ${words[1]}`
+		gnomeColorList[$gnomeColorIndex]="\$gdm_grey"
+		(( gnomeColorIndex++ ))
+		gnomeColorMap["\$gdm_grey",2]=`formatHex ${words[1]}`
 	fi
 }
 
@@ -360,15 +363,15 @@ formatColors () {
 display () {
 	echo -e 'Colors Light Dark Neutral'
 	declare -a validColors	
-	size=${#colorMap[@]}
+	size=${#gnomeColorMap[@]}
 	count=0
-	for color in ${colorList[*]} 
+	for color in ${gnomeColorList[*]} 
 	do
 		for i in {0..2}
 		do
-			if [[ ${#colorMap[$color,$i]} -eq 7 && ${colorMap[$color,$i]:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+			if [[ ${#gnomeColorMap[$color,$i]} -eq 7 && ${gnomeColorMap[$color,$i]:1} =~ ^[0-9A-Fa-f]{6}$ ]]
 			then 
-				validColors[$i]=${colorMap[$color,$i]}
+				validColors[$i]=${gnomeColorMap[$color,$i]}
 				(( count++ ))
 			else 
 				validColors[$i]=$placeholder
@@ -382,4 +385,132 @@ display () {
 display | column -t
 
 # Done displaying parsed colors
+
+if $c
+then echo -e "\n\033[01;01mNow let's extract colors used in gtk Pop OS theme\033[00m\n"
+else echo -e "\nNow let's extract colors used in gtk Pop OS theme and display only those different from gnome theme\n"
+fi
+
+declare -A gtkColorMap
+declare -a gtkColorList
+gtkColorIndex=0
+
+gtkShellColors="/gtk/src/light/gtk-3.20/_colors.scss"
+
+extractGTKBaseColors () {
+	words=($1)
+	for color in ${baseColorsArray[*]}
+	do
+		if [[ $1 == *"$color:"* ]]
+		then
+			gtkColorList[$gtkColorIndex]=$color
+			(( gtkColorIndex++ ))
+			gtkColorMap[$color,0]=`formatHex ${words[4]}`
+			gtkColorMap[$color,1]=`formatHex ${words[5]}`
+		fi
+	done
+}
+
+while read l; do
+	extractGTKBaseColors "$l"
+done < $refDir$gtkShellColors
+
+gtkPopOsColors="/gtk/src/light/gtk-3.20/_pop_os-colors.scss"
+
+gtkExtractPopColors () {
+	words=($1)
+	for color in ${popColorsArray[*]}
+	do
+		for variant in ${variants[*]}
+		do
+			if [[ $1 == *"$variant$color"* && $1 != *"//"* ]]
+			then
+				gtkColorList[$gtkColorIndex]=$variant$color
+				(( gtkColorIndex++ ))
+				gtkColorMap[$variant$color,0]=`formatHex ${words[2]}`
+				gtkColorMap[$variant$color,1]=`formatHex ${words[3]}`
+			fi
+		done
+	done
+}
+
+gtkExtractWarmGreys () {
+	words=($1)
+	case $1 in
+	*"\$light_warm_grey:"*)
+		gtkColorList[$gtkColorIndex]="\$warm_grey"
+		(( gtkColorIndex++ ))
+		gtkColorMap["\$warm_grey",0]=`formatHex ${words[1]}`
+		;;
+	*"\$dark_warm_grey:"*)
+		gtkColorMap["\$warm_grey",1]=`formatHex ${words[1]}`
+		;;
+	*"\$warm_grey:"*)
+		gtkColorMap["\$warm_grey",2]=`formatHex ${words[1]}`
+		;;
+	esac
+}
+
+gtkExtractUIColors () {
+	words=($1)
+	for color in ${uiColorsArray[*]}
+	do
+		if [[ $1 == *"\$light$color:"* ]]
+		then
+			gtkColorList[$gtkColorIndex]="\$light$color"
+			(( gtkColorIndex++ ))
+			gtkColorMap["\$light$color",2]=`formatHex ${words[1]}`
+		fi
+		if [[ $1 == *"\$dark$color:"* ]]
+		then
+			gtkColorList[$gtkColorIndex]="\$dark$color"
+			(( gtkColorIndex++ ))
+			gtkColorMap["\$dark$color",2]=`formatHex ${words[1]}`
+		fi
+	done
+}
+
+gtkExtractGDMGrey () {
+	words=($1)
+	if [[ $1 == *"\$gdm_grey:"* ]]
+	then
+		gtkColorList[$gnomeColorIndex]="\$gdm_grey"
+		(( gtkColorIndex++ ))
+		gtkColorMap["\$gdm_grey",2]=`formatHex ${words[1]}`
+	fi
+}
+
+while read l || [ -n "$l" ]
+do
+	gtkExtractPopColors "$l" 
+	gtkExtractWarmGreys "$l"
+	gtkExtractUIColors "$l"
+	gtkExtractGDMGrey "$l"
+done < $refDir$gtkPopOsColors
+
+
+
+displayGTK () {
+	echo -e 'Colors Light Dark Neutral'
+	declare -a validColors	
+	size=${#gtkColorMap[@]}
+	count=0
+	for color in ${gtkColorList[*]} 
+	do
+		for i in {0..2}
+		do
+			if [[ ${#gtkColorMap[$color,$i]} -eq 7 && ${gtkColorMap[$color,$i]:1} =~ ^[0-9A-Fa-f]{6}$ && ${gtkColorMap[$color,$i]} != ${gnomeColorMap[$color,$i]} ]]
+			then 
+				validColors[$i]=${gtkColorMap[$color,$i]}
+				(( count++ ))
+			else 
+				validColors[$i]=$placeholder
+			fi
+		done
+		echo -ne "Parsing pop color code $count of $size"\\r 1>&2
+		echo -e `formatColors "$color" "${validColors[0]}" "${validColors[1]}" "${validColors[2]}"`
+	done 
+}
+
+displayGTK | column -t
 
