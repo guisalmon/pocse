@@ -160,6 +160,7 @@ then
 	echo -e "\033[01;01mMost terminals have only 256 colors\033[00m"
 	echo -e "\033[01;01mYour screen has more (I hope for you)\033[00m"
 	echo -e "\033[01;01mColors displayed here will only be an approximation\033[00m\n"
+	echo -e "\033[01;01mParsing TermX color codes will take a while on the first run, but once cached it'll be faster on subsequent runs\033[00m\n"
 	if ! [ -f $colorsJson ]
 	then
 		echo "Reference color codes not locally available, do you want to download them ? [Y/n]"
@@ -237,78 +238,83 @@ while read l; do
 		refDarkFg=${words[5]#*#}
 		refDarkFg="#${refDarkFg:0:6}"
 		refLightFg=${words[4]#*#}
-		refLightF="#${refLightFg:0:6}"
+		refLightFg="#${refLightFg:0:6}"
 		;;
 	esac
 done < $refDir$shellColors
 
-displayColors () {
-	codeLight=`getColorCode $2`
-	codeDark=`getColorCode $3`
-	echo "$1 \t \033[01;38;5;${codeLight}m$2\033[00m \033[01;38;5;${codeDark}m$3\033[00m"
+formatColors () {
+	if $c
+	then
+		codeLight=`getColorCode $2`
+		codeDark=`getColorCode $3`
+		echo "$1 \033[01;38;5;${codeLight}m$2\033[00m \033[01;38;5;${codeDark}m$3\033[00m"
+	else
+		echo "$1 $2 $3"
+	fi
 }
 
-echo -e '\t \t \t Light \t Dark'
-echo -e `displayColors "Base \t \t" $refLightBase $refDarkBase`
-echo -e `displayColors "Background \t" $refLightBg $refDarkBg`
-echo -e `displayColors "Foreground \t" $refLightFg $refDarkFg`
+displayColors () {
+	echo -e 'Colors Light Dark'
+	echo -e `formatColors "Base" $refLightBase $refDarkBase`
+	echo -e `formatColors "Background" $refLightBg $refDarkBg`
+	echo -e `formatColors "Foreground" $refLightFg $refDarkFg`
+}
+
+displayColors | column -t
 
 echo -e "\n\033[01;01mColors from _pop_os_colors.scss\033[00m"
-popOsColors="/gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss"
-refOrangeBL=#000000
-refOrangeHL=#000000
-refOrangeTL=#000000
-refOrangeBD=#000000
-refOrangeHD=#000000
-refOrangeTD=#000000
-refBlueBL=#000000
-refBlueHL=#000000
-refBlueTL=#000000
-refBlueBD=#000000
-refBlueHD=#000000
-refBlueTD=#000000
 
-ghpoc () {
+popOsColors="/gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss"
+popColorsArray=("orange" "blue" "green" "red" "yellow" "purple" "pink" "indigo")
+variants=("\$" "\$highlights_" "\$text_")
+
+declare -A popColorsMap
+for color in ${popColorsArray[*]}
+do
+	for variant in ${variants[*]}
+	do 
+		popColorsMap[$color,$variant,0]="#000000"
+	done
+done
+
+formatHex () {
 	li=${1#*#}
 	echo "#${li:0:6}"
 }
 
+extractColors () {
+	words=($1)
+	for color in ${popColorsArray[*]}
+	do
+		for variant in ${variants[*]}
+		do
+			if [[ $1 == *"$variant$color"* ]]
+			then
+				popColorsMap[$color,$variant,0]=`formatHex ${words[2]}`
+				popColorsMap[$color,$variant,1]=`formatHex ${words[3]}`
+			fi
+		done
+	done
+}
+
+displayPopColors () {
+	echo 'Colors Light Dark'
+	for color in ${popColorsArray[*]}
+	do
+		for variant in ${variants[*]}
+		do
+			echo -e `formatColors "$variant$color" ${popColorsMap[$color,$variant,0]} ${popColorsMap[$color,$variant,1]}`
+		done
+	done
+}
+
 while read l; do
-	words=($l)
-	case $l in
-	*'$orange:'*)
-		refOrangeBL=`ghpoc ${words[2]}`
-		refOrangeBD=`ghpoc ${words[3]}`
-		;;
-	*'$highlights_orange:'*)
-		refOrangeHL=`ghpoc ${words[2]}`
-		refOrangeHD=`ghpoc ${words[3]}`
-		;;
-	*'$text_orange:'*)
-		refOrangeTL=`ghpoc ${words[2]}`
-		refOrangeTD=`ghpoc ${words[3]}`
-		;;
-	*'$blue:'*)
-		refBlueBL=`ghpoc ${words[2]}`
-		refBlueBD=`ghpoc ${words[3]}`
-		;;
-	*'$highlights_blue:'*)
-		refBlueHL=`ghpoc ${words[2]}`
-		refBlueHD=`ghpoc ${words[3]}`
-		;;
-	*'$text_blue:'*)
-		refBlueTL=`ghpoc ${words[2]}`
-		refBlueTD=`ghpoc ${words[3]}`
-		;;
-	esac
+	extractColors "$l"
 done < $refDir$popOsColors
 
-echo -e '\t \t \t Light \t Dark'
-echo -e `displayColors "Orange \t\t" $refOrangeBL $refOrangeBD`
-echo -e `displayColors "Orange highlights" $refOrangeHL $refOrangeHD`
-echo -e `displayColors "Orange text\t" $refOrangeTL $refOrangeTD`
-echo -e `displayColors "Blue \t\t" $refBlueBL $refBlueBD`
-echo -e `displayColors "Blue highlights" $refBlueHL $refBlueHD`
-echo -e `displayColors "Blue text\t" $refBlueTL $refBlueTD`
+displayPopColors | column -t
+
+
 
 
