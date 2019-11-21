@@ -223,7 +223,20 @@ formatHex () {
 	echo "#${li:0:6}"
 }
 
+formatColors () {
+	if $c
+	then
+		codeLight=`getColorCode $2`
+		codeDark=`getColorCode $3`
+		echo "$1 \033[01;38;5;${codeLight}m$2\033[00m \033[01;38;5;${codeDark}m$3\033[00m"
+	else
+		echo "$1 $2 $3"
+	fi
+}
+
 # Parsing colors from /gnome-shell/src/gnome-shell-sass/_colors.scss 
+
+echo -e "\033[01;01mLet's extract colors used in gnome-shell theme\033[00m\n"
 
 shellColors="/gnome-shell/src/gnome-shell-sass/_colors.scss"
 baseColorsArray=("\$base_color" "\$bg_color" "\$fg_color")
@@ -245,17 +258,6 @@ while read l; do
 		fi
 	done
 done < $refDir$shellColors
-
-formatColors () {
-	if $c
-	then
-		codeLight=`getColorCode $2`
-		codeDark=`getColorCode $3`
-		echo "$1 \033[01;38;5;${codeLight}m$2\033[00m \033[01;38;5;${codeDark}m$3\033[00m"
-	else
-		echo "$1 $2 $3"
-	fi
-}
 
 displayBaseColors () {
 	size=${#baseColorsMap[@]}
@@ -377,7 +379,7 @@ displayWarmGreys () {
 	fi
 }
 
-displayUIColors() {
+displayUIColors () {
 	size=${#uiColorsMap[@]}
 	count=1
 	for color in ${uiColorsArray[*]}
@@ -409,7 +411,7 @@ done < $refDir$popOsColors
 
 # End of color parsing from /gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss 
 
-display() {
+display () {
 	echo -e 'Colors Light Dark Neutral'	
 	echo -e "\033[01;01m_colors.scss\033[00m"
 	displayBaseColors
