@@ -215,7 +215,7 @@ while read l; do
 	esac
 done < $refDir/TESTING.md
 
-echo "Copy theme directory to $modDir where modifications will happen."
+echo -e "Copy theme directory to $modDir where modifications will happen.\n"
 cp -r $refDir $modDir
 
 formatHex () {
@@ -225,7 +225,6 @@ formatHex () {
 
 # Parsing colors from /gnome-shell/src/gnome-shell-sass/_colors.scss 
 
-echo -e "\n\033[01;01mColors from _colors.scss\033[00m"
 shellColors="/gnome-shell/src/gnome-shell-sass/_colors.scss"
 baseColorsArray=("\$base_color" "\$bg_color" "\$fg_color")
 declare -A baseColorsMap
@@ -261,27 +260,25 @@ formatColors () {
 displayBaseColors () {
 	size=${#baseColorsMap[@]}
 	count=1
-	echo -e 'Colors Light Dark'
 	for color in ${baseColorsArray[*]}
 	do
-		echo -ne "Parsing color code $count of $size"\\r 1>&2
+		echo -ne "Parsing base color code $count of $size"\\r 1>&2
 		echo -e `formatColors "$color" ${baseColorsMap[$color,0]} ${baseColorsMap[$color,1]}`
 		(( count++ ))	
 		(( count++ ))
 	done
 }
 
-displayBaseColors | column -t
-
 # End of color parsing from /gnome-shell/src/gnome-shell-sass/_colors.scss 
 
 # Parsing colors from /gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss 
 
-echo -e "\n\033[01;01mColors from _pop_os_colors.scss\033[00m"
-
 popOsColors="/gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss"
 popColorsArray=("orange" "blue" "green" "red" "yellow" "purple" "pink" "indigo")
 variants=("\$" "\$highlights_" "\$text_")
+warmGreysArray=("#000000" "#000000" "#000000")
+uiColorsArray=("_ui_100" "_ui_300" "_ui_500" "_ui_700" "_ui_900")
+gdmGrey="#000000"
 
 declare -A popColorsMap
 for color in ${popColorsArray[*]}
@@ -293,7 +290,14 @@ do
 	done
 done
 
-extractColors () {
+declare -A uiColorsMap
+for color in ${uiColorsArray[*]}
+do
+	uiColorsMap[$color,0]="#000000"
+	uiColorsMap[$color,1]="#000000"
+done
+
+extractPopColors () {
 	words=($1)
 	for color in ${popColorsArray[*]}
 	do
@@ -308,15 +312,52 @@ extractColors () {
 	done
 }
 
+extractWarmGreys () {
+	words=($1)
+	case $1 in
+	*"\$light_warm_grey"*)
+		warmGreysArray[0]=`formatHex ${words[1]}`
+		;;
+	*"\$dark_warm_grey"*)
+		warmGreysArray[1]=`formatHex ${words[1]}`
+		;;
+	*"\$warm_grey"*)
+		warmGreysArray[2]=`formatHex ${words[1]}`
+		;;
+	esac
+}
+
+extractUIColors () {
+	words=($1)
+	for color in ${uiColorsArray[*]}
+	do
+		if [[ $1 == *"\$light$color:"* ]]
+		then
+			uiColorsMap[$color,0]=`formatHex ${words[1]}`
+		fi
+		if [[ $1 == *"\$dark$color:"* ]]
+		then
+			uiColorsMap[$color,1]=`formatHex ${words[1]}`
+		fi
+	done
+}
+
+extractGDMGrey () {
+	words=($1)
+	if [[ $1 == *"\$gdm_grey:"* ]]
+	then
+		gdmGrey=`formatHex ${words[1]}`
+	fi
+}
+
 displayPopColors () {	
 	size=${#popColorsMap[@]}
 	count=1
-	echo 'Colors Light Dark'
 	for color in ${popColorsArray[*]}
 	do
 		for variant in ${variants[*]}
 		do
-			echo -ne "Parsing color code $count of $size"\\r 1>&2
+			echo -ne "Parsing pop color code $count of $size"\\r 1>&2
 			echo -e `formatColors "$variant$color" ${popColorsMap[$color,$variant,0]} ${popColorsMap[$color,$variant,1]}`
 			(( count++ ))
 			(( count++ ))
@@ -324,11 +365,60 @@ displayPopColors () {
 	done
 }
 
-while read l; do
-	extractColors "$l" 
+displayWarmGreys () {
+	if $c
+	then
+		codeLight=`getColorCode ${warmGreysArray[0]}`
+		codeDark=`getColorCode ${warmGreysArray[1]}`
+		codeNeutral=`getColorCode ${warmGreysArray[2]}`
+		echo -e "\$warm_grey \033[01;38;5;${codeLight}m${warmGreysArray[0]}\033[00m \033[01;38;5;${codeDark}m${warmGreysArray[1]}\033[00m \033[01;38;5;${codeNeutral}m${warmGreysArray[2]}\033[00m"
+	else
+		echo "\$warm_grey ${warmGreysArray[0]} ${warmGreysArray[1]} ${warmGreysArray[2]}"
+	fi
+}
+
+displayUIColors() {
+	size=${#uiColorsMap[@]}
+	count=1
+	for color in ${uiColorsArray[*]}
+	do
+		echo -ne "Parsing UI color code $count of $size"\\r 1>&2
+		echo -e `formatColors "$color" ${uiColorsMap[$color,0]} ${uiColorsMap[$color,1]}`
+			(( count++ ))
+			(( count++ ))
+	done
+}
+
+displayGDMColor () {
+	if $c
+	then
+		codeNeutral=`getColorCode $gdmGrey`
+		echo -e "\$gdm_grey [_____] [_____] \033[01;38;5;${codeNeutral}m$gdmGrey\033[00m"
+	else
+		echo "\$gdm_grey \t \t $gdmGrey"
+	fi
+}
+
+while read l || [ -n "$l" ]
+do
+	extractPopColors "$l" 
+	extractWarmGreys "$l"
+	extractUIColors "$l"
+	extractGDMGrey "$l"
 done < $refDir$popOsColors
 
-displayPopColors | column -t
-
 # End of color parsing from /gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss 
+
+display() {
+	echo -e 'Colors Light Dark Neutral'	
+	echo -e "\033[01;01m_colors.scss\033[00m"
+	displayBaseColors
+	echo -e "\033[01;01m_pop_os_colors.scss\033[00m"
+	displayPopColors
+	displayWarmGreys
+	displayUIColors
+	displayGDMColor
+}
+
+display | column -t
 
