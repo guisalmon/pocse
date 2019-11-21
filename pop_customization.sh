@@ -6,6 +6,8 @@ refDir='Pop_Theme_reference'
 modDir='Pop_Theme_modified'
 colorsJson="$resDir/colors.json"
 
+# Functions related to color output in terminal if -c option was provided
+
 hexToRGB () {
 	hex=$1
 	printf "%d %d %d\n" 0x${hex:0:2} 0x${hex:2:2} 0x${hex:4:2}
@@ -81,6 +83,10 @@ getColorCode () {
     echo $code
 }
 
+# end of color output related functions
+
+# Script parameters handling
+
 d=false
 i=false
 r=false
@@ -128,7 +134,7 @@ then
 	rm -r $resDir
 fi
 
-mkdir $resDir
+if [ ! -d $resDir ] ; then mkdir $resDir ; fi
 
 if ! $d
 then
@@ -177,6 +183,8 @@ then
 	fi
 fi
 
+# End of script parameter handling
+
 count=0
 while read l; do
 	((count++))
@@ -210,37 +218,33 @@ done < $refDir/TESTING.md
 echo "Copy theme directory to $modDir where modifications will happen."
 cp -r $refDir $modDir
 
+formatHex () {
+	li=${1#*#}
+	echo "#${li:0:6}"
+}
+
+# Parsing colors from /gnome-shell/src/gnome-shell-sass/_colors.scss 
+
 echo -e "\n\033[01;01mColors from _colors.scss\033[00m"
 shellColors="/gnome-shell/src/gnome-shell-sass/_colors.scss"
-refDarkBase="#000000"
-refLightBase="#000000"
-refDarkBg="#000000"
-refLightBg="#000000"
-refDarkFg="#000000"
-refLightFg="#000000"
+baseColorsArray=("\$base_color" "\$bg_color" "\$fg_color")
+declare -A baseColorsMap
+for color in ${baseColorsArray[*]}
+do
+	baseColorsMap[$color,0]="#000000"
+	baseColorsMap[$color,1]="#000000"
+done
 
 while read l; do
 	words=($l)
-	case $l in
-	*'$base_color:'*)
-		refDarkBase=${words[5]#*#}
-		refDarkBase="#${refDarkBase:0:6}"
-		refLightBase=${words[4]#*#}
-		refLightBase="#${refLightBase:0:6}"
-		;;
-	*'$bg_color:'*)
-		refDarkBg=${words[5]#*#}
-		refDarkBg="#${refDarkBg:0:6}"
-		refLightBg=${words[4]#*#}
-		refLightBg="#${refLightBg:0:6}"
-		;;
-	*'$fg_color:'*)
-		refDarkFg=${words[5]#*#}
-		refDarkFg="#${refDarkFg:0:6}"
-		refLightFg=${words[4]#*#}
-		refLightFg="#${refLightFg:0:6}"
-		;;
-	esac
+	for color in ${baseColorsArray[*]}
+	do
+		if [[ $l == *"$color:"* ]]
+		then
+			baseColorsMap[$color,0]=`formatHex ${words[4]}`
+			baseColorsMap[$color,1]=`formatHex ${words[5]}`
+		fi
+	done
 done < $refDir$shellColors
 
 formatColors () {
@@ -254,14 +258,24 @@ formatColors () {
 	fi
 }
 
-displayColors () {
+displayBaseColors () {
+	size=${#baseColorsMap[@]}
+	count=1
 	echo -e 'Colors Light Dark'
-	echo -e `formatColors "Base" $refLightBase $refDarkBase`
-	echo -e `formatColors "Background" $refLightBg $refDarkBg`
-	echo -e `formatColors "Foreground" $refLightFg $refDarkFg`
+	for color in ${baseColorsArray[*]}
+	do
+		echo -ne "Parsing color code $count of $size"\\r 1>&2
+		echo -e `formatColors "$color" ${baseColorsMap[$color,0]} ${baseColorsMap[$color,1]}`
+		(( count++ ))	
+		(( count++ ))
+	done
 }
 
-displayColors | column -t
+displayBaseColors | column -t
+
+# End of color parsing from /gnome-shell/src/gnome-shell-sass/_colors.scss 
+
+# Parsing colors from /gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss 
 
 echo -e "\n\033[01;01mColors from _pop_os_colors.scss\033[00m"
 
@@ -275,13 +289,9 @@ do
 	for variant in ${variants[*]}
 	do 
 		popColorsMap[$color,$variant,0]="#000000"
+		popColorsMap[$color,$variant,1]="#000000"
 	done
 done
-
-formatHex () {
-	li=${1#*#}
-	echo "#${li:0:6}"
-}
 
 extractColors () {
 	words=($1)
@@ -298,23 +308,27 @@ extractColors () {
 	done
 }
 
-displayPopColors () {
+displayPopColors () {	
+	size=${#popColorsMap[@]}
+	count=1
 	echo 'Colors Light Dark'
 	for color in ${popColorsArray[*]}
 	do
 		for variant in ${variants[*]}
 		do
+			echo -ne "Parsing color code $count of $size"\\r 1>&2
 			echo -e `formatColors "$variant$color" ${popColorsMap[$color,$variant,0]} ${popColorsMap[$color,$variant,1]}`
+			(( count++ ))
+			(( count++ ))
 		done
 	done
 }
 
 while read l; do
-	extractColors "$l"
+	extractColors "$l" 
 done < $refDir$popOsColors
 
 displayPopColors | column -t
 
-
-
+# End of color parsing from /gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss 
 
