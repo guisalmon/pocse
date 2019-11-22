@@ -659,8 +659,11 @@ gnomeGetUserInput () {
 	if [[ $input != "" ]]
 	then
 		gnomeNewColorMap[$1,$variant]=$input
-		editedColorArray[$editedColorIndex]=$1
-		(( editedColorIndex++ ))
+		if [[ ! " ${editedColorArray[@]} " =~ " ${1} " ]]
+		then
+			editedColorArray[$editedColorIndex]=$1
+			(( editedColorIndex++ ))
+		fi
 	fi
 }
 
@@ -673,7 +676,7 @@ done
 [[ $variant == 0 ]] && newVariantName="dark" || newVariantName="light"
 
 input="."
-while [[ $input != "y" && $input != "Y" && $input != "n" && $input != "N" && $input != "yes" && $input != "Yes" && $input != "no" && $input != "No" && $input != "" ]]
+while [[ ! $input =~ ^(y|Y|yes|Yes|n|N|no|No)$ && $input != "" ]]
 do
 	echo -ne "Do you want to edit $newVariantName theme? [Y/n]"
 	read input
@@ -694,7 +697,7 @@ then
 	[[ $variant  == 0 ]] && variant=1 || variant=0
 
 	input="."
-	while [[ $input != "y" && $input != "Y" && $input != "n" && $input != "N" && $input != "yes" && $input != "Yes" && $input != "no" && $input != "No" && $input != "" ]]
+	while [[ ! $input =~ ^(y|Y|yes|Yes|n|N|no|No)$ && $input != "" ]]
 	do
 		echo -ne "Do you want to reuse colors from $variantName theme in $newVariantName theme where they were reused in reference theme? [Y/n]"
 		read input
@@ -708,11 +711,13 @@ then
 			;;
 	esac
 
+	declare -A alreadyEditedVariant
+
 	if $reuse
 	then
-		for color in ${editedColorArray[*]}
+		for otherColor in ${newColorArray[*]}
 		do
-			for otherColor in ${newColorArray[*]}
+			for color in ${editedColorArray[*]}
 			do
 				if [[ ${gnomeColorMap[$color,$oldVariant]} == ${gnomeColorMap[$otherColor,$variant]} ]]
 				then
@@ -726,17 +731,19 @@ then
 						editedColorArray[$editedColorIndex]=$otherColor
 						(( editedColorIndex++ ))
 					fi
-					blbl=${gnomeNewColorMap[$color,$oldVariant]}
-					gnomeNewColorMap[$otherColor,$variant]=$blbl
+					alreadyEditedVariant[$color]=$otherColor
+					gnomeNewColorMap[$otherColor,$variant]=${gnomeNewColorMap[$color,$oldVariant]}
 				fi
 			done
 		done
+
 	fi
 
 	for color in ${editedColorArray[*]}
 	do 
 		if [[ ${#gnomeNewColorMap[$color,$variant]} -ne 7 
-			&& ! ${gnomeNewColorMap[$color,$variant]:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+			&& ! ${gnomeNewColorMap[$color,$variant]:1} =~ ^[0-9A-Fa-f]{6}$ 
+			&& ${alreadyEditedVariant[$color]} == "" ]]
 		then
 			gnomeGetUserInput $color
 		fi
