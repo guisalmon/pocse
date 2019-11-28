@@ -105,7 +105,7 @@ man='\n -d \t Force download of reference theme from Pop OS git repo.
 \n -o NAME \t Specify a name for the new theme'
 
 d=false
-i=false
+install=false
 r=false
 c=false
 e=false
@@ -119,7 +119,7 @@ do
 		d=true
 		;;
 	"-i")
-		i=true
+		install=true
 		;;
 	"-r")
 		echo "-r isn't yet implemented"
@@ -400,14 +400,14 @@ done < $refDir$popOsColors
 formatColor () {
 	if $c
 	then
-		if [[ ${#1} -eq 7 && ${1:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+		if [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]]
 		then 
 			color="\033[01;38;5;`getColorCode $1`m$1\033[00m"
 		else 
 			color="\033[00;08m$placeholder\033[00m"
 		fi
 	else
-		if [[ ${#1} -eq 7 && ${1:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+		if [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]]
 		then 
 			color=$1
 		else 
@@ -430,7 +430,7 @@ display () {
 	do
 		for i in {0..2}
 		do
-			if [[ ${#gnomeColorMap[$color,$i]} -eq 7 && ${gnomeColorMap[$color,$i]:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+			if [[ ${#gnomeColorMap[$color,$i]} -eq 7 && ${gnomeColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 			then 
 				validColors[$i]=${gnomeColorMap[$color,$i]}
 				(( count++ ))
@@ -568,7 +568,7 @@ displayGTK () {
 	do
 		for i in {0..2}
 		do
-			if [[ ${#gtkColorMap[$color,$i]} -eq 7 && ${gtkColorMap[$color,$i]:1} =~ ^[0-9A-Fa-f]{6}$ && ${gtkColorMap[$color,$i]} != ${gnomeColorMap[$color,$i]} ]]
+			if [[ ${#gtkColorMap[$color,$i]} -eq 7 && ${gtkColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ && ${gtkColorMap[$color,$i]} != ${gnomeColorMap[$color,$i]} ]]
 			then 
 				validColors[$i]=${gtkColorMap[$color,$i]}
 				(( count++ ))
@@ -651,7 +651,7 @@ echo -e "\nYou will be prompted with colors to edit, type in valid hexadecimal c
 
 gnomeGetUserInput () {
 	input="."
-	while ! [[ ${#input} -eq 7 && ${input:1} =~ ^[0-9A-Fa-f]{6}$ || $input == "" ]]
+	while ! [[ ${#input} -eq 7 && ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
 	do
 		echo -ne "$1: `formatColor ${gnomeColorMap[$1,$variant]}` : "
 		read input
@@ -722,11 +722,11 @@ then
 				if [[ ${gnomeColorMap[$color,$oldVariant]} == ${gnomeColorMap[$otherColor,$variant]} ]]
 				then
 					if [[ ${#gnomeNewColorMap[$otherColor,0]} -ne 7 
-						&& ! ${gnomeNewColorMap[$otherColor,0]:1} =~ ^[0-9A-Fa-f]{6}$ 
+						&& ! ${gnomeNewColorMap[$otherColor,0]} =~ ^#[0-9A-Fa-f]{6}$ 
 						&& ${#gnomeNewColorMap[$otherColor,1]} -ne 7 
-						&& ! ${gnomeNewColorMap[$otherColor,1]:1} =~ ^[0-9A-Fa-f]{6}$ 
+						&& ! ${gnomeNewColorMap[$otherColor,1]} =~ ^#[0-9A-Fa-f]{6}$ 
 						&& ${#gnomeNewColorMap[$otherColor,2]} -ne 7 
-						&& ! ${gnomeNewColorMap[$otherColor,2]:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+						&& ! ${gnomeNewColorMap[$otherColor,2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 					then
 						editedColorArray[$editedColorIndex]=$otherColor
 						(( editedColorIndex++ ))
@@ -742,7 +742,7 @@ then
 	for color in ${editedColorArray[*]}
 	do 
 		if [[ ${#gnomeNewColorMap[$color,$variant]} -ne 7 
-			&& ! ${gnomeNewColorMap[$color,$variant]:1} =~ ^[0-9A-Fa-f]{6}$ 
+			&& ! ${gnomeNewColorMap[$color,$variant]} =~ ^#[0-9A-Fa-f]{6}$ 
 			&& ${alreadyEditedVariant[$color]} == "" ]]
 		then
 			gnomeGetUserInput $color
@@ -763,7 +763,7 @@ displayEdition () {
 	do
 		for i in {0..2}
 		do
-			if [[ ${#gnomeNewColorMap[$color,$i]} -eq 7 && ${gnomeNewColorMap[$color,$i]:1} =~ ^[0-9A-Fa-f]{6}$ ]]
+			if [[ ${#gnomeNewColorMap[$color,$i]} -eq 7 && ${gnomeNewColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 			then 
 				validColors[$i]=${gnomeNewColorMap[$color,$i]}
 				(( count++ ))
@@ -777,4 +777,33 @@ displayEdition () {
 }
 
 echo -e "\n"
+
+replaceColor () {
+	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gnomeNewColorMap[$1,0]} -eq 7 ]]
+	then
+		sed -i "s/${gnomeColorMap[$1,0]},/${gnomeNewColorMap[$1,0]},/g" $modDir$popOsColors
+	fi
+	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gnomeNewColorMap[$1,1]} -eq 7 ]]
+	then
+		sed -i "s/${gnomeColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$popOsColors
+	fi
+}
+
 displayEdition | column -t
+
+for color in ${editedColorArray[*]}
+do
+	replaceColor $color
+done
+
+sed -i "s/project('Pop'/project(\'$exportDir\'/g" "$modDir/meson.build"
+
+if $install
+then
+	cp -r $modDir $exportDir
+	cd $exportDir
+	meson build && cd build
+	ninja
+	ninja install
+fi
+
