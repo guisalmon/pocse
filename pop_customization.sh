@@ -789,6 +789,7 @@ replaceColor () {
 	fi
 }
 
+echo "Modified colors in Gnome theme"
 displayEdition | column -t
 
 for color in ${editedColorArray[*]}
@@ -796,14 +797,125 @@ do
 	replaceColor $color
 done
 
+declare -a gtkEditedColorArray
+gtkEditedColorIndex=0
+declare -A gtkNewColorMap
+
+gtkGetUserInput () {
+	input="."
+	while ! [[ ${#input} -eq 7 && ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
+	do
+		echo -e "$1 was `formatColor ${gnomeColorMap[$1,$2]}` in Gnome, `formatColor ${gtkColorMap[$1,$2]}` in GTK"
+		echo -ne "$1 was changed to `formatColor ${gnomeNewColorMap[$1,$2]}` in Gnome, enter value for GTK: "
+		read input
+	done
+	if [[ $input != "" ]]
+	then
+		gtkNewColorMap[$1,$2]=$input
+		if [[ ! " ${gtkEditedColorArray[@]} " =~ " ${1} " ]]
+		then
+			gtkEditedColorArray[$gtkEditedColorIndex]=$1
+			(( gtkEditedColorIndex++ ))
+		fi
+	fi
+}
+
+gnomeToGTK () {
+	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gnomeNewColorMap[$1,0]} -eq 7 ]]
+	then
+		if [[ ${gnomeColorMap[$1,0]} == ${gtkColorMap[$1,0]} ]]
+		then
+			gtkNewColorMap[$1,0]=${gnomeNewColorMap[$1,0]}
+			gtkEditedColorArray[$gtkEditedColorIndex]=$1
+			(( gtkEditedColorIndex++ ))
+		else
+			gtkGetUserInput $1 "0"
+		fi
+	fi
+	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gnomeNewColorMap[$1,1]} -eq 7 ]]
+	then
+		if [[ ${gnomeColorMap[$1,1]} == ${gtkColorMap[$1,1]} ]]
+		then
+			gtkNewColorMap[$1,1]=${gnomeNewColorMap[$1,1]}
+			newIndex=true
+			if [[ ! " ${gtkEditedColorArray[@]} " =~ " ${1} " ]]
+			then
+				gtkEditedColorArray[$gtkEditedColorIndex]=$1
+				(( gtkEditedColorIndex++ ))
+			fi
+		else
+			gtkGetUserInput $1 "1"
+		fi
+	fi
+}
+
+echo -e "\nGTK theme shows differences from Gnome theme on the following colors:"
+
+for color in ${newColorArray[*]}
+do
+	gnomeToGTK $color
+done
+
+gtkDisplayEdition () {
+	echo -e 'Edited Light New Dark New Neutral Neutral'
+	declare -a validColors	
+	size=${#gtkNewColorMap[@]}
+	count=0
+	for color in ${gtkEditedColorArray[*]} 
+	do
+		for i in {0..2}
+		do
+			if [[ ${#gtkNewColorMap[$color,$i]} -eq 7 && ${gtkNewColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+			then 
+				validColors[$i]=${gtkNewColorMap[$color,$i]}
+				(( count++ ))
+			else 
+				validColors[$i]=$placeholder
+			fi
+		done
+		echo -ne "Parsing color code $count of $size"\\r 1>&2
+		echo -e `editionFormatColors "$color" "${gtkColorMap[$color,0]}" "${validColors[0]}" "${gtkColorMap[$color,1]}" "${validColors[1]}" "${gtkColorMap[$color,2]}" "${validColors[2]}"`
+	done 
+}
+
+gtkReplaceColor () {
+	if [[ ${gtkNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gtkNewColorMap[$1,0]} -eq 7 ]]
+	then
+		sed -i "s/${gtkColorMap[$1,0]},/${gtkNewColorMap[$1,0]},/g" $modDir$gtkPopOsColors
+	fi
+	if [[ ${gtkNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gtkNewColorMap[$1,1]} -eq 7 ]]
+	then
+		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkPopOsColors
+	fi
+}
+
+echo -e "\nModified colors in GTK theme"
+gtkDisplayEdition | column -t
+
+for color in ${gtkEditedColorArray[*]}
+do
+	gtkReplaceColor $color
+done
+
 sed -i "s/project('Pop'/project(\'$exportDir\'/g" "$modDir/meson.build"
 
-if $install
+cp -r $modDir $exportDir
+
+if ! $install
 then
-	cp -r $modDir $exportDir
-	cd $exportDir
-	meson build && cd build
-	ninja
-	ninja install
+	input="."
+	while [[ ! $input =~ ^(y|Y|yes|Yes|n|N|no|No)$ && $input != "" ]]
+	do
+		echo -ne "\nYou're done editing $exportDir theme, do you want to install it? [Y/n]"
+		read input
+	done
+	[[ $input =~ ^(n|N|no|No)$ ]] && exit || echo -e "\n"
+else
+	echo -e "\nYou're done editing $exportDir theme, it will now be installed.\n"
 fi
+
+cd $exportDir
+meson build && cd build
+ninja
+ninja install
 
