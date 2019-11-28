@@ -46,10 +46,7 @@ getClosestColor () {
 
 		if [ $offset -le $minOffset ]
 		then
-			if [ ${colorArray[$offset]+_} ] 
-			then colorArray["$offset"]+=", $color"
-			else colorArray["$offset"]=$color
-			fi
+			[ ${colorArray[$offset]+_} ] && colorArray["$offset"]+=", $color" || colorArray["$offset"]=$color
 			minOffset=$offset
 		fi
 	done
@@ -247,40 +244,7 @@ fi
 
 # End of script parameter handling
 
-count=0
-while read l; do
-	((count++))
-	print=false
-	dark=false
-	case $l in
-	*"- Orange:"*)
-		color="Orange: "
-		;;
-	*"- Blue:"*)
-		color="Blue: "
-		;;
-	*"- Window background:"*)
-		color="Window Background: "
-		;;
-	*"- Header/Title Bars:"*)
-		color="Header/Title Bars: "
-		;;
-	*"- Dark theme:"*)
-		dark=true
-		words=($l)
-		#echo "color 1: ${words[3]}, color 2: ${words[5]}"
-		;;
-	*"- Light theme:"*)
-		words=($l)
-		#echo "color 1: ${words[3]}, color 2: ${words[5]}"
-		;;
-	esac
-done < $refDir/TESTING.md
-
-if $c
-then echo -e "\033[01;01mLet's extract colors used in gnome-shell Pop OS theme\033[00m\n"
-else echo -e "Let's extract colors used in gnome-shell Pop OS theme\n"
-fi
+$c && echo -e "\033[01;01mLet's extract colors used in gnome-shell Pop OS theme\033[00m\n" || echo -e "Let's extract colors used in gnome-shell Pop OS theme\n"
 
 declare -A gnomeColorMap
 declare -a gnomeColorList
@@ -399,20 +363,10 @@ done < $refDir$popOsColors
 
 formatColor () {
 	if $c
-	then
-		if [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]]
-		then 
-			color="\033[01;38;5;`getColorCode $1`m$1\033[00m"
-		else 
-			color="\033[00;08m$placeholder\033[00m"
-		fi
-	else
-		if [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]]
-		then 
-			color=$1
-		else 
-			color="$placeholder"
-		fi
+	then [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] 
+		&& color="\033[01;38;5;`getColorCode $1`m$1\033[00m" 
+		|| color="\033[00;08m$placeholder\033[00m"
+	else [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] && color=$1 || color="$placeholder"
 	fi
 	echo $color
 }
@@ -616,8 +570,6 @@ fi
 cp -r $refDir $modDir
 echo -e "\nReference theme directory copied to $modDir where modifications will happen.\n"
 
-# Edit parsed colors
-
 input=""
 while [[ $input != "l" && $input != "d" ]]
 do
@@ -641,6 +593,8 @@ then
 	echo "Edition of all colors not implemented yet, fallback to quick edition"
 	quick=true
 fi
+
+# Gnome colors edition
 
 newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue")
 declare -a editedColorArray
@@ -797,6 +751,10 @@ do
 	replaceColor $color
 done
 
+# End of Gnome colors edition
+
+# GTK colors edition
+
 declare -a gtkEditedColorArray
 gtkEditedColorIndex=0
 declare -A gtkNewColorMap
@@ -897,9 +855,17 @@ do
 	gtkReplaceColor $color
 done
 
+# End of GTK colors edition
+
+# Export
+
 sed -i "s/project('Pop'/project(\'$exportDir\'/g" "$modDir/meson.build"
 
 cp -r $modDir $exportDir
+
+# End of export
+
+# Installation
 
 if ! $install
 then
@@ -918,4 +884,6 @@ cd $exportDir
 meson build && cd build
 ninja
 ninja install
+
+# End of installation
 
