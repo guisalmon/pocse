@@ -10,7 +10,7 @@ userPrefix="Pop-"
 colorsJson="$resDir/colors.json"
 shellColors="/gnome-shell/src/gnome-shell-sass/_colors.scss"
 popOsColors="/gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss"
-gtkShellColors="/gtk/src/light/gtk-3.20/_colors.scss"
+gtkColors="/gtk/src/light/gtk-3.20/_colors.scss"
 gtkPopOsColors="/gtk/src/light/gtk-3.20/_pop_os-colors.scss"
 
 # Functions related to color output in terminal if -c option was provided
@@ -143,7 +143,7 @@ do
 	*)
 		case $lastArg in 
 		"-u")
-			if [[ $arg != "" && -d $arg && -f $arg$shellColors && -f $arg$gtkShellColors && -f $arg$popOsColors && -f $arg$gtkPopOsColors ]]
+			if [[ $arg != "" && -d $arg && -f $arg$shellColors && -f $arg$gtkColors && -f $arg$popOsColors && -f $arg$gtkPopOsColors ]]
 			then
 				refDir=$arg
 			else
@@ -181,7 +181,7 @@ then
 	then
 		echo "Please provide a valid theme directory as reference to update : "
 		input=""
-		while [[ $input == "" || ! -d $input || ! -f $input$shellColors || ! -f $input$gtkShellColors || ! -f $input$popOsColors || ! -f $input$gtkPopOsColors ]]
+		while [[ $input == "" || ! -d $input || ! -f $input$shellColors || ! -f $input$gtkColors || ! -f $input$popOsColors || ! -f $input$gtkPopOsColors ]]
 		do
 			echo -ne "$userPrefix"
 			read input
@@ -430,7 +430,7 @@ extractGTKBaseColors () {
 
 while read l; do
 	extractGTKBaseColors "$l"
-done < $refDir$gtkShellColors
+done < $refDir$gtkColors
 
 # End of color parsing from /gtk/src/light/gtk-3.20/_colors.scss
 
@@ -598,7 +598,7 @@ fi
 
 # Gnome colors edition
 
-newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue")
+newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue" "\$base_color" "\$bg_color")
 declare -a editedColorArray
 editedColorIndex=0
 declare -A gnomeNewColorMap
@@ -743,6 +743,14 @@ replaceColor () {
 	then
 		sed -i "s/${gnomeColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$popOsColors
 	fi
+	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		sed -i "s/${gnomeNewColorMap[$1,0]},/${gnomeNewColorMap[$1,0]},/g" $modDir$shellColors
+	fi
+	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		sed -i "s/${gnomeNewColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$shellColors
+	fi
 }
 
 echo "Modified colors in Gnome theme"
@@ -846,6 +854,14 @@ gtkReplaceColor () {
 	if [[ ${gtkNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkPopOsColors
+	fi
+	if [[ ${gtkNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		sed -i "s/${gtkColorMap[$1,0]},/${gtkNewColorMap[$1,0]},/g" $modDir$gtkColors
+	fi
+	if [[ ${gtkNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkColors
 	fi
 }
 
