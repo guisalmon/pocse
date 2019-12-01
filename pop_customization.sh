@@ -66,27 +66,27 @@ colorCodeCached () {
 
 getColorCode () {
 	hex=$1
-	code=0
+	code=37
+	fgCode=97
 	if [[ ${#hex} -eq 7 ]]
 	then
 		hex="${hex:1}"
 		if [[ $hex =~ ^[0-9A-Fa-f]{6}$ ]]
 		then
+			rgb=(`hexToRGB $hex`)
+			rgbSum=$((${rgb[0]}+${rgb[1]}+${rgb[2]}))
+			[[ $rgbSum -le 382 ]] && fgCode="97" || fgCode="30"
 			touch $colorCodes
 			code=`colorCodeCached $hex`
 			if [ $code == "-1" ] 
 			then
-				rgb=(`hexToRGB $hex`)
-				r=${rgb[0]}
-				g=${rgb[1]}
-				b=${rgb[2]}
-				color=`getClosestColor $r $g $b`
+				color=`getClosestColor ${rgb[0]} ${rgb[1]} ${rgb[2]}`
 				code=`echo $color | jq ".colorId"`
 				echo "$hex $code" >> $colorCodes
 			fi
 		fi
 	fi
-    echo $code
+    echo "$fgCode;48;5;$code"
 }
 
 # end of color output related functions
@@ -367,7 +367,7 @@ formatColor () {
 	if $c
 	then 
 		if [[ ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] 
-		then color="\033[01;38;5;`getColorCode $1`m$1\033[00m" 
+		then color="\033[`getColorCode $1`m$1\033[00m" 
 		else color="\033[00;08m$placeholder\033[00m"
 		fi
 	else [[ ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] && color=$1 || color="$placeholder"
