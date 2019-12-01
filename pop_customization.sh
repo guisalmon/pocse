@@ -364,11 +364,11 @@ done < $refDir$popOsColors
 formatColor () {
 	if $c
 	then 
-		if [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] 
+		if [[ ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] 
 		then color="\033[01;38;5;`getColorCode $1`m$1\033[00m" 
 		else color="\033[00;08m$placeholder\033[00m"
 		fi
-	else [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] && color=$1 || color="$placeholder"
+	else [[ ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] && color=$1 || color="$placeholder"
 	fi
 	echo $color
 }
@@ -386,7 +386,7 @@ display () {
 	do
 		for i in {0..2}
 		do
-			if [[ ${#gnomeColorMap[$color,$i]} -eq 7 && ${gnomeColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+			if [[ ${gnomeColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 			then 
 				validColors[$i]=${gnomeColorMap[$color,$i]}
 				(( count++ ))
@@ -524,7 +524,7 @@ displayGTK () {
 	do
 		for i in {0..2}
 		do
-			if [[ ${#gtkColorMap[$color,$i]} -eq 7 && ${gtkColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ && ${gtkColorMap[$color,$i]} != ${gnomeColorMap[$color,$i]} ]]
+			if [[ ${gtkColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ && ${gtkColorMap[$color,$i]} != ${gnomeColorMap[$color,$i]} ]]
 			then 
 				validColors[$i]=${gtkColorMap[$color,$i]}
 				(( count++ ))
@@ -607,7 +607,7 @@ echo -e "\nYou will be prompted with colors to edit, type in valid hexadecimal c
 
 gnomeGetUserInput () {
 	input="."
-	while ! [[ ${#input} -eq 7 && ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
+	while ! [[ ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
 	do
 		echo -ne "$1: `formatColor ${gnomeColorMap[$1,$variant]}` : "
 		read input
@@ -630,6 +630,8 @@ done
 
 [[ $variant == 0 ]] && variantName="light" || variantName="dark"
 [[ $variant == 0 ]] && newVariantName="dark" || newVariantName="light"
+
+echo -e ""
 
 input="."
 while [[ ! $input =~ ^(y|Y|yes|Yes|n|N|no|No)$ && $input != "" ]]
@@ -667,6 +669,8 @@ then
 			;;
 	esac
 
+	echo -e ""
+
 	declare -A alreadyEditedVariant
 
 	if $reuse
@@ -677,11 +681,8 @@ then
 			do
 				if [[ ${gnomeColorMap[$color,$oldVariant]} == ${gnomeColorMap[$otherColor,$variant]} ]]
 				then
-					if [[ ${#gnomeNewColorMap[$otherColor,0]} -ne 7 
-						&& ! ${gnomeNewColorMap[$otherColor,0]} =~ ^#[0-9A-Fa-f]{6}$ 
-						&& ${#gnomeNewColorMap[$otherColor,1]} -ne 7 
+					if [[ ! ${gnomeNewColorMap[$otherColor,0]} =~ ^#[0-9A-Fa-f]{6}$ 
 						&& ! ${gnomeNewColorMap[$otherColor,1]} =~ ^#[0-9A-Fa-f]{6}$ 
-						&& ${#gnomeNewColorMap[$otherColor,2]} -ne 7 
 						&& ! ${gnomeNewColorMap[$otherColor,2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 					then
 						editedColorArray[$editedColorIndex]=$otherColor
@@ -697,8 +698,7 @@ then
 
 	for color in ${editedColorArray[*]}
 	do 
-		if [[ ${#gnomeNewColorMap[$color,$variant]} -ne 7 
-			&& ! ${gnomeNewColorMap[$color,$variant]} =~ ^#[0-9A-Fa-f]{6}$ 
+		if [[ ! ${gnomeNewColorMap[$color,$variant]} =~ ^#[0-9A-Fa-f]{6}$ 
 			&& ${alreadyEditedVariant[$color]} == "" ]]
 		then
 			gnomeGetUserInput $color
@@ -719,7 +719,7 @@ displayEdition () {
 	do
 		for i in {0..2}
 		do
-			if [[ ${#gnomeNewColorMap[$color,$i]} -eq 7 && ${gnomeNewColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+			if [[ ${gnomeNewColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 			then 
 				validColors[$i]=${gnomeNewColorMap[$color,$i]}
 				(( count++ ))
@@ -735,11 +735,11 @@ displayEdition () {
 echo -e "\n"
 
 replaceColor () {
-	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gnomeNewColorMap[$1,0]} -eq 7 ]]
+	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gnomeColorMap[$1,0]},/${gnomeNewColorMap[$1,0]},/g" $modDir$popOsColors
 	fi
-	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gnomeNewColorMap[$1,1]} -eq 7 ]]
+	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gnomeColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$popOsColors
 	fi
@@ -763,7 +763,7 @@ declare -A gtkNewColorMap
 
 gtkGetUserInput () {
 	input="."
-	while ! [[ ${#input} -eq 7 && ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
+	while ! [[ ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
 	do
 		echo -e "$1 was `formatColor ${gnomeColorMap[$1,$2]}` in Gnome, `formatColor ${gtkColorMap[$1,$2]}` in GTK"
 		echo -ne "$1 was changed to `formatColor ${gnomeNewColorMap[$1,$2]}` in Gnome, enter value for GTK: "
@@ -781,7 +781,7 @@ gtkGetUserInput () {
 }
 
 gnomeToGTK () {
-	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gnomeNewColorMap[$1,0]} -eq 7 ]]
+	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		if [[ ${gnomeColorMap[$1,0]} == ${gtkColorMap[$1,0]} ]]
 		then
@@ -792,7 +792,7 @@ gnomeToGTK () {
 			gtkGetUserInput $1 "0"
 		fi
 	fi
-	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gnomeNewColorMap[$1,1]} -eq 7 ]]
+	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		if [[ ${gnomeColorMap[$1,1]} == ${gtkColorMap[$1,1]} ]]
 		then
@@ -825,7 +825,7 @@ gtkDisplayEdition () {
 	do
 		for i in {0..2}
 		do
-			if [[ ${#gtkNewColorMap[$color,$i]} -eq 7 && ${gtkNewColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+			if [[ ${gtkNewColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 			then 
 				validColors[$i]=${gtkNewColorMap[$color,$i]}
 				(( count++ ))
@@ -839,11 +839,11 @@ gtkDisplayEdition () {
 }
 
 gtkReplaceColor () {
-	if [[ ${gtkNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gtkNewColorMap[$1,0]} -eq 7 ]]
+	if [[ ${gtkNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gtkColorMap[$1,0]},/${gtkNewColorMap[$1,0]},/g" $modDir$gtkPopOsColors
 	fi
-	if [[ ${gtkNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ && ${#gtkNewColorMap[$1,1]} -eq 7 ]]
+	if [[ ${gtkNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkPopOsColors
 	fi
