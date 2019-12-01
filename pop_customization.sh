@@ -768,12 +768,21 @@ declare -a gtkEditedColorArray
 gtkEditedColorIndex=0
 declare -A gtkNewColorMap
 
+variantName () {
+	if [[ $1 == 0 ]] ; then echo "light" ; elif [[ $1 == 1 ]] ; then echo "dark" ; else echo "" ; fi
+}
+
 gtkGetUserInput () {
 	input="."
 	while ! [[ ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
 	do
-		echo -e "$1 was `formatColor ${gnomeColorMap[$1,$2]}` in Gnome, `formatColor ${gtkColorMap[$1,$2]}` in GTK"
-		echo -ne "$1 was changed to `formatColor ${gnomeNewColorMap[$1,$2]}` in Gnome, enter value for GTK: "
+		if [[ ${gnomeColorMap[$1,$2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+		then
+			echo -e "$1 was `formatColor ${gnomeColorMap[$1,$2]}` in Gnome, `formatColor ${gtkColorMap[$1,$2]}` in GTK"
+			echo -ne "$1 was changed to `formatColor ${gnomeNewColorMap[$1,$2]}` in Gnome, enter value for GTK: "
+		else
+			echo -ne "$1 is `formatColor ${gtkColorMap[$1,$2]}` in GTK `variantName $2` theme, change to: "
+		fi
 		read input
 	done
 	if [[ $input != "" ]]
@@ -814,11 +823,13 @@ gnomeToGTK () {
 			gtkGetUserInput $1 "1"
 		fi
 	fi	
-	if [[ ! ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ && ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	if [[ ! ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ 
+		&& ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		gtkGetUserInput $1 "0"
 	fi
-	if [[ ! ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ && ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	if [[ ! ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ 
+		&& ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		gtkGetUserInput $1 "1"
 	fi
