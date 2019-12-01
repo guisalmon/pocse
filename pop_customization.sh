@@ -12,6 +12,8 @@ shellColors="/gnome-shell/src/gnome-shell-sass/_colors.scss"
 popOsColors="/gnome-shell/src/gnome-shell-sass/_pop_os_colors.scss"
 gtkColors="/gtk/src/light/gtk-3.20/_colors.scss"
 gtkPopOsColors="/gtk/src/light/gtk-3.20/_pop_os-colors.scss"
+gtkUbuntuColors="/gtk/src/light/gtk-3.20/_ubuntu-colors.scss"
+gtkTweaks="/gtk/src/light/gtk-3.20/_tweaks.scss"
 
 # Functions related to color output in terminal if -c option was provided
 
@@ -258,7 +260,7 @@ formatHex () {
 
 # Parsing colors from /gnome-shell/src/gnome-shell-sass/_colors.scss 
 
-baseColorsArray=("\$base_color" "\$bg_color" "\$fg_color")
+baseColorsArray=("\$base_color" "\$bg_color" "\$fg_color" "\$headerbar_color")
 
 while read l; do
 	words=($l)
@@ -598,7 +600,7 @@ fi
 
 # Gnome colors edition
 
-newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue" "\$base_color" "\$bg_color")
+newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue" "\$base_color" "\$bg_color" "\$headerbar_color")
 declare -a editedColorArray
 editedColorIndex=0
 declare -A gnomeNewColorMap
@@ -625,7 +627,10 @@ gnomeGetUserInput () {
 
 for color in ${newColorArray[*]}
 do
-	gnomeGetUserInput $color
+	if [[ ${gnomeColorMap[$color,$variant]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		gnomeGetUserInput $color
+	fi
 done
 
 [[ $variant == 0 ]] && variantName="light" || variantName="dark"
@@ -738,18 +743,12 @@ replaceColor () {
 	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gnomeColorMap[$1,0]},/${gnomeNewColorMap[$1,0]},/g" $modDir$popOsColors
+		sed -i "s/${gnomeColorMap[$1,0]},/${gnomeNewColorMap[$1,0]},/g" $modDir$shellColors
 	fi
 	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gnomeColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$popOsColors
-	fi
-	if [[ ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
-	then
-		sed -i "s/${gnomeNewColorMap[$1,0]},/${gnomeNewColorMap[$1,0]},/g" $modDir$shellColors
-	fi
-	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
-	then
-		sed -i "s/${gnomeNewColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$shellColors
+		sed -i "s/${gnomeColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$shellColors
 	fi
 }
 
@@ -799,7 +798,7 @@ gnomeToGTK () {
 		else
 			gtkGetUserInput $1 "0"
 		fi
-	fi
+	fi	
 	if [[ ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		if [[ ${gnomeColorMap[$1,1]} == ${gtkColorMap[$1,1]} ]]
@@ -814,6 +813,14 @@ gnomeToGTK () {
 		else
 			gtkGetUserInput $1 "1"
 		fi
+	fi	
+	if [[ ! ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ && ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		gtkGetUserInput $1 "0"
+	fi
+	if [[ ! ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ && ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		gtkGetUserInput $1 "1"
 	fi
 }
 
@@ -850,18 +857,14 @@ gtkReplaceColor () {
 	if [[ ${gtkNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gtkColorMap[$1,0]},/${gtkNewColorMap[$1,0]},/g" $modDir$gtkPopOsColors
+		sed -i "s/${gtkColorMap[$1,0]},/${gtkNewColorMap[$1,0]},/g" $modDir$gtkColors
+		sed -i "s/${gtkColorMap[$1,0]},/${gtkNewColorMap[$1,0]},/g" $modDir$gtkUbuntuColors
 	fi
 	if [[ ${gtkNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkPopOsColors
-	fi
-	if [[ ${gtkNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
-	then
-		sed -i "s/${gtkColorMap[$1,0]},/${gtkNewColorMap[$1,0]},/g" $modDir$gtkColors
-	fi
-	if [[ ${gtkNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
-	then
 		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkColors
+		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkUbuntuColors
 	fi
 }
 
@@ -871,6 +874,10 @@ gtkDisplayEdition | column -t
 for color in ${gtkEditedColorArray[*]}
 do
 	gtkReplaceColor $color
+	if [[ $color == "\$orange" ]]
+	then
+		sed -i "s/${gtkColorMap[$color,0]}/${gtkNewColorMap[$color,0]}/g" $modDir$gtkTweaks
+	fi
 done
 
 # End of GTK colors edition
