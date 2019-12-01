@@ -260,7 +260,7 @@ formatHex () {
 
 # Parsing colors from /gnome-shell/src/gnome-shell-sass/_colors.scss 
 
-baseColorsArray=("\$base_color" "\$bg_color" "\$fg_color" "\$headerbar_color")
+baseColorsArray=("\$base_color" "\$bg_color" "\$fg_color" "\$headerbar_color" "\$selected_bg_color")
 
 while read l; do
 	words=($l)
@@ -270,8 +270,15 @@ while read l; do
 		then
 			gnomeColorList[$gnomeColorIndex]=$color
 			(( gnomeColorIndex++ ))
-			gnomeColorMap[$color,0]=`formatHex ${words[4]}`
-			gnomeColorMap[$color,1]=`formatHex ${words[5]}`
+			if [[ $color == "\$selected_bg_color" ]]
+			then	
+				# Fix for a line formatted differently than the others in _colors.scss
+				gnomeColorMap[$color,0]=`formatHex ${words[2]}`
+				gnomeColorMap[$color,1]=`formatHex ${words[3]}`
+			else
+				gnomeColorMap[$color,0]=`formatHex ${words[4]}`
+				gnomeColorMap[$color,1]=`formatHex ${words[5]}`
+			fi
 		fi
 	done
 done < $refDir$shellColors
@@ -424,8 +431,15 @@ extractGTKBaseColors () {
 		then
 			gtkColorList[$gtkColorIndex]=$color
 			(( gtkColorIndex++ ))
-			gtkColorMap[$color,0]=`formatHex ${words[4]}`
-			gtkColorMap[$color,1]=`formatHex ${words[5]}`
+			if [[ $color == "\$selected_bg_color" ]]
+			then	
+				# Fix for a line formatted differently than the others in _colors.scss
+				gtkColorMap[$color,0]=`formatHex ${words[2]}`
+				gtkColorMap[$color,1]=`formatHex ${words[3]}`
+			else
+				gtkColorMap[$color,0]=`formatHex ${words[4]}`
+				gtkColorMap[$color,1]=`formatHex ${words[5]}`
+			fi
 		fi
 	done
 }
@@ -600,7 +614,7 @@ fi
 
 # Gnome colors edition
 
-newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue" "\$base_color" "\$bg_color" "\$headerbar_color")
+newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue" "\$base_color" "\$bg_color" "\$headerbar_color" "\$selected_bg_color")
 declare -a editedColorArray
 editedColorIndex=0
 declare -A gnomeNewColorMap
