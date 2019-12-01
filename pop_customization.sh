@@ -363,9 +363,11 @@ done < $refDir$popOsColors
 
 formatColor () {
 	if $c
-	then [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] 
-		&& color="\033[01;38;5;`getColorCode $1`m$1\033[00m" 
-		|| color="\033[00;08m$placeholder\033[00m"
+	then 
+		if [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] 
+		then color="\033[01;38;5;`getColorCode $1`m$1\033[00m" 
+		else color="\033[00;08m$placeholder\033[00m"
+		fi
 	else [[ ${#1} -eq 7 && ${1} =~ ^#[0-9A-Fa-f]{6}$ ]] && color=$1 || color="$placeholder"
 	fi
 	echo $color
@@ -861,6 +863,7 @@ done
 
 sed -i "s/project('Pop'/project(\'$exportDir\'/g" "$modDir/meson.build"
 
+rm -r $exportDir
 cp -r $modDir $exportDir
 
 # End of export
@@ -884,6 +887,7 @@ cd $exportDir
 meson build && cd build
 ninja
 ninja install
+cd ../
 
 # End of installation
 
