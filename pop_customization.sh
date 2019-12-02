@@ -2,9 +2,11 @@
 
 resDir="res"
 colorCodes="$resDir/colorCodes"
+userColorCodes="$resDir/userColorCodes"
 refDir=""
 modDir=""
 modPrefix=".modified_"
+lastTheme=".last"
 exportDir=""
 userPrefix="Pop-"
 colorsJson="$resDir/colors.json"
@@ -14,6 +16,7 @@ gtkColors="/gtk/src/light/gtk-3.20/_colors.scss"
 gtkPopOsColors="/gtk/src/light/gtk-3.20/_pop_os-colors.scss"
 gtkUbuntuColors="/gtk/src/light/gtk-3.20/_ubuntu-colors.scss"
 gtkTweaks="/gtk/src/light/gtk-3.20/_tweaks.scss"
+colorExportsDir="color_exports"
 
 # Functions related to color output in terminal if -c option was provided
 
@@ -60,7 +63,7 @@ colorCodeCached () {
 	while read l ; do
 		line=($l)
 		[ $1 == ${line[0]} ] && code=${line[1]}
-	done < $colorCodes
+	done < $userColorCodes
 	echo $code
 }
 
@@ -76,13 +79,13 @@ getColorCode () {
 			rgb=(`hexToRGB $hex`)
 			rgbSum=$((${rgb[0]}+${rgb[1]}+${rgb[2]}))
 			[[ $rgbSum -le 382 ]] && fgCode="97" || fgCode="30"
-			touch $colorCodes
+			[[ ! -f $userColorCodes ]] && cp $colorCodes $userColorCodes
 			code=`colorCodeCached $hex`
 			if [ $code == "-1" ] 
 			then
 				color=`getClosestColor ${rgb[0]} ${rgb[1]} ${rgb[2]}`
 				code=`echo $color | jq ".colorId"`
-				echo "$hex $code" >> $colorCodes
+				echo "$hex $code" >> $userColorCodes
 			fi
 		fi
 	fi
@@ -93,15 +96,28 @@ getColorCode () {
 
 # Script parameters handling
 
-manHeader='Usage: pop_customization [OPTIONS] [DIRECTORY] \nGenerates a Pop OS based theme with a custom color scheme.\n'
-man='\n -d \t Force download of reference theme from Pop OS git repo.
+manHeader='Usage: pop_customization [OPTIONS] \nGenerates a Pop OS based theme with a custom color scheme.\n'
+man="\n -d \t Force download of reference theme from Pop OS git repo.
 \n -i \t Install theme after customization
 \n -r \t Reset installed theme to vanilla Pop OS theme.
 \n -h \t Display this help and exit.
 \n -c \t Use terminal colors for preview (compatible with most modern terminals)
 \n -e \t Edit theme after parsing of colors
 \n -u [DIRECTORY] \t Update a previously edited theme
-\n -o NAME \t Specify a name for the new theme'
+\n -o NAME \t Specify a name for the new theme
+\n -s FILE \t Use a previously exported scheme from $colorExportsDir instead of manually edit colors"
+
+installTheme () {
+	cd $exportDir
+	meson build && cd build
+	ninja
+	ninja install
+	cd ../../
+	touch $lastTheme
+	echo $exportDir > $lastTheme
+	echo -e "\nDon't forget to select your newly installed theme from the Gnome tweak tool"
+	echo "It is also recommanded that you restart the shell, either by login out then in or by typing alt-f2 then r"
+}
 
 d=false
 install=false
@@ -110,6 +126,8 @@ c=false
 e=false
 u=false
 o=false
+declare -A importedGnomeScheme
+declare -A importedGTKScheme
 lastArg=""
 for arg in "$@"
 do
@@ -119,11 +137,6 @@ do
 		;;
 	"-i")
 		install=true
-		;;
-	"-r")
-		echo "-r isn't yet implemented"
-		r=true
-		exit
 		;;
 	"-h")
 		echo -e $manHeader
@@ -141,6 +154,11 @@ do
 		;;
 	"-o")
 		o=true
+		;;
+	"-s")
+		;;
+	"-r")
+		r=true
 		;;
 	*)
 		case $lastArg in 
@@ -161,10 +179,39 @@ do
 			else exit
 			fi
 			;;
+		"-s")
+			if [ -f $arg ]
+			then
+				themeType=""
+				while read l || [ -n "$l" ] ; do
+					words=($l)
+					if [[ ${#words[@]} == 1 ]]
+					then
+						themeType=${words[0]}
+					elif [[ ${#words[@]} == 4 && ${words[0]} = \$* ]]
+					then
+						if [[ $themeType = "Gnome" ]]
+						then
+							importedGnomeScheme[${words[0]},0]=${words[1]}
+							importedGnomeScheme[${words[0]},1]=${words[2]}
+							importedGnomeScheme[${words[0]},2]=${words[3]}
+						elif [[ $themeType = "GTK" ]]
+						then
+							importedGTKScheme[${words[0]},0]=${words[1]}
+							importedGTKScheme[${words[0]},1]=${words[2]}
+							importedGTKScheme[${words[0]},2]=${words[3]}
+						fi
+					fi
+				done < $arg
+			else
+				echo "$arg is not a file"
+				exit
+			fi
+			;;
 		*)
 			echo "Unknown argument $arg"
 			exit
-		;;
+			;;
 		esac
 	esac
 	lastArg=$arg
@@ -199,7 +246,7 @@ fi
 
 if ! $d
 then
-	if [ ! -d $refDir ]
+	if [ ! -d "Pop_Reference" ]
 	then 
 		echo "Reference theme not locally available, do you want to download it? [Y/n]"
 		read input
@@ -219,6 +266,33 @@ then
 	echo "Get official Pop OS theme from git repo." 
 	rm -r $refDir
 	git clone https://github.com/pop-os/gtk-theme.git $refDir
+fi
+
+if $r
+then
+	if $u 
+	then
+		echo "Ignoring -u option, -r takes precedence"
+	fi
+	if ! $o
+	then 
+		exportDir="Pop-Reset"
+		if [[ -f $lastTheme ]]
+		then
+			last=`cat $lastTheme`
+			lastContents=($last)
+			if [[ ${#lastContents[@]} == 1 ]]
+			then
+				exportDir=${lastContents[0]}
+			fi
+		fi
+	fi
+	echo "$exportDir will be reset to vanilla Pop OS theme"
+	[[ -d $exportDir ]] && rm -r $exportDir
+	cp -r "Pop_Reference" $exportDir
+	sed -i "s/project('Pop'/project(\'$exportDir\'/g" "$exportDir/meson.build"
+	installTheme
+	exit
 fi
 
 if $c
@@ -586,6 +660,8 @@ then
 fi
 [ -d $modDir ] && rm -r $modDir
 cp -r $refDir $modDir
+colorsFile="$colorExportsDir/${exportDir}_colors"
+[[ -f $colorsFile ]] && echo "" > $colorsFile || touch $colorsFile
 echo -e "\nReference theme directory copied to $modDir where modifications will happen.\n"
 
 input=""
@@ -622,7 +698,12 @@ declare -A gnomeNewColorMap
 echo -e "\nYou will be prompted with colors to edit, type in valid hexadecimal color codes (eg. #000000) to edit them or [ENTER] to keep them\n"
 
 gnomeGetUserInput () {
-	input="."
+	if [[ ${importedGnomeScheme[$1,$variant]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		input=${importedGnomeScheme[$1,$variant]}
+	else
+		input="."
+	fi
 	while ! [[ ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
 	do
 		echo -ne "$1: `formatColor ${gnomeColorMap[$1,$variant]}` : "
@@ -731,7 +812,8 @@ editionFormatColors () {
 
 displayEdition () {
 	echo -e 'Edited Light New Dark New Neutral Neutral'
-	declare -a validColors	
+	declare -a validColors
+	colorsToFile="Gnome \nColor Light Dark Neutral \n"
 	size=${#gnomeNewColorMap[@]}
 	count=0
 	for color in ${editedColorArray[*]} 
@@ -747,8 +829,10 @@ displayEdition () {
 			fi
 		done
 		echo -ne "Parsing color code $count of $size"\\r 1>&2
+		colorsToFile+="\n$color ${validColors[0]} ${validColors[1]} ${validColors[2]}"
 		echo -e `editionFormatColors "$color" "${gnomeColorMap[$color,0]}" "${validColors[0]}" "${gnomeColorMap[$color,1]}" "${validColors[1]}" "${gnomeColorMap[$color,2]}" "${validColors[2]}"`
 	done 
+	echo -e $colorsToFile | column -t >> $colorsFile
 }
 
 echo -e "\n"
@@ -787,7 +871,12 @@ variantName () {
 }
 
 gtkGetUserInput () {
-	input="."
+	if [[ ${importedGTKScheme[$1,$2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		input=${importedGTKScheme[$1,$2]}
+	else
+		input="."
+	fi
 	while ! [[ ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
 	do
 		if [[ ${gnomeColorMap[$1,$2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
@@ -859,6 +948,7 @@ done
 gtkDisplayEdition () {
 	echo -e 'Edited Light New Dark New Neutral Neutral'
 	declare -a validColors	
+	colorsToFile="GTK \nColor Light Dark Neutral \n"
 	size=${#gtkNewColorMap[@]}
 	count=0
 	for color in ${gtkEditedColorArray[*]} 
@@ -874,8 +964,10 @@ gtkDisplayEdition () {
 			fi
 		done
 		echo -ne "Parsing color code $count of $size"\\r 1>&2
+		colorsToFile+="\n$color ${validColors[0]} ${validColors[1]} ${validColors[2]}"
 		echo -e `editionFormatColors "$color" "${gtkColorMap[$color,0]}" "${validColors[0]}" "${gtkColorMap[$color,1]}" "${validColors[1]}" "${gtkColorMap[$color,2]}" "${validColors[2]}"`
 	done 
+	echo -e $colorsToFile | column -t >> $colorsFile
 }
 
 gtkReplaceColor () {
@@ -931,11 +1023,7 @@ else
 	echo -e "\nYou're done editing $exportDir theme, it will now be installed.\n"
 fi
 
-cd $exportDir
-meson build && cd build
-ninja
-ninja install
-cd ../
+installTheme
 
 # End of installation
 

@@ -1,5 +1,6 @@
-/res
 /Pop_Reference
-/.modified_*
 /Pop-*
+/color_exports*
 stuffToEdit
+/.*
+/res/userColorCodes
