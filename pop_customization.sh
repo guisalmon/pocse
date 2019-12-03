@@ -661,6 +661,7 @@ fi
 [ -d $modDir ] && rm -r $modDir
 cp -r $refDir $modDir
 colorsFile="$colorExportsDir/${exportDir}_colors"
+[[ ! -d $colorExportsDir ]] && mkdir $colorExportsDir
 [[ -f $colorsFile ]] && echo "" > $colorsFile || touch $colorsFile
 echo -e "\nReference theme directory copied to $modDir where modifications will happen.\n"
 
@@ -872,8 +873,6 @@ replaceColor () {
 	fi
 }
 
-mkdir $colorExportsDir
-touch $colorsFile
 echo "Modified colors in Gnome theme"
 displayEdition | column -t
 
@@ -1021,11 +1020,15 @@ gtkDisplayEdition | column -t
 for color in ${gtkEditedColorArray[*]}
 do
 	gtkReplaceColor $color
-	if [[ $color == "\$orange" ]]
-	then
-		sed -i "s/${gtkColorMap[$color,0]}/${gtkNewColorMap[$color,0]}/g" $modDir$gtkTweaks
-	fi
 done
+
+if [[ ${gtkNewColorMap["\$orange",0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+then
+	sed -i "s/${gtkColorMap["\$orange",0]}/${gtkNewColorMap["\$orange",0]}/g" $modDir$gtkTweaks
+elif [[ ${gtkNewColorMap["\$highlights_orange",1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+then
+	sed -i "s/${gtkColorMap["\$highlights_orange",1]}/${gtkNewColorMap["\$highlights_orange",1]}/g" $modDir$gtkTweaks
+fi
 
 # End of GTK colors edition
 
