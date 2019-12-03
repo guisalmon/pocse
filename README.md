@@ -133,6 +133,8 @@ The theme should appear in `gnome-tweak-tool` for `applications` and `shell` und
 
 It is advised to reload the shell after setting it by typing `alt f2` then `r`.
 
+Sometimes this won't be enough to fully apply the themes, then restarting the system should solve the issue.
+
 ## License
 
 ### This script: 
