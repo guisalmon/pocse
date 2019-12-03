@@ -872,6 +872,8 @@ replaceColor () {
 	fi
 }
 
+mkdir $colorExportsDir
+touch $colorsFile
 echo "Modified colors in Gnome theme"
 displayEdition | column -t
 
