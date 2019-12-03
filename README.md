@@ -13,6 +13,8 @@
 
 This script allows you to edit Pop!_OS theme using your own color scheme. 
 
+(Pop!_OS official theme)[https://github.com/pop-os/gtk-theme]
+
 ## Requirements
 
 ### Inherited from the Pop!_OS theme: 
