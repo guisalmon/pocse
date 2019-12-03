@@ -680,17 +680,25 @@ do
 	read input
 done
 
-[[ $input == 'm' ]] && quick=true || quick=false
-
-if ! $quick
+if [[ $input == 'm' ]]
 then
-	echo "Edition of all colors not implemented yet, fallback to quick edition"
-	quick=true
+	newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue" "\$base_color" "\$bg_color" "\$headerbar_color" "\$selected_bg_color" "\$gdm_grey")
+else
+	newColorArray=$gnomeColorList
+	size=${#newColorArray[@]}
+	for color in ${gtkColorList[*]}
+	do
+		color=${color%,*}
+		if [[ ! " ${newColorArray[@]} " =~ " ${color} " ]]
+		then
+			newColorArray[$size]=$color
+			(( size++ ))
+		fi
+	done
 fi
 
 # Gnome colors edition
 
-newColorArray=("\$orange" "\$highlights_orange" "\$text_orange" "\$blue" "\$highlights_blue" "\$text_blue" "\$base_color" "\$bg_color" "\$headerbar_color" "\$selected_bg_color")
 declare -a editedColorArray
 editedColorIndex=0
 declare -A gnomeNewColorMap
@@ -698,20 +706,20 @@ declare -A gnomeNewColorMap
 echo -e "\nYou will be prompted with colors to edit, type in valid hexadecimal color codes (eg. #000000) to edit them or [ENTER] to keep them\n"
 
 gnomeGetUserInput () {
-	if [[ ${importedGnomeScheme[$1,$variant]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	if [[ ${importedGnomeScheme[$1,$2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
-		input=${importedGnomeScheme[$1,$variant]}
+		input=${importedGnomeScheme[$1,$2]}
 	else
 		input="."
 	fi
 	while ! [[ ${input} =~ ^#[0-9A-Fa-f]{6}$ || $input == "" ]]
 	do
-		echo -ne "$1: `formatColor ${gnomeColorMap[$1,$variant]}` : "
+		echo -ne "$1: `formatColor ${gnomeColorMap[$1,$2]}` : "
 		read input
 	done
 	if [[ $input != "" ]]
 	then
-		gnomeNewColorMap[$1,$variant]=$input
+		gnomeNewColorMap[$1,$2]=$input
 		if [[ ! " ${editedColorArray[@]} " =~ " ${1} " ]]
 		then
 			editedColorArray[$editedColorIndex]=$1
@@ -724,7 +732,11 @@ for color in ${newColorArray[*]}
 do
 	if [[ ${gnomeColorMap[$color,$variant]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
-		gnomeGetUserInput $color
+		gnomeGetUserInput $color $variant
+	fi
+	if [[ ${gnomeColorMap[$color,2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		gnomeGetUserInput $color 2
 	fi
 done
 
@@ -799,9 +811,10 @@ then
 	for color in ${editedColorArray[*]}
 	do 
 		if [[ ! ${gnomeNewColorMap[$color,$variant]} =~ ^#[0-9A-Fa-f]{6}$ 
-			&& ${alreadyEditedVariant[$color]} == "" ]]
+			&& ${alreadyEditedVariant[$color]} == ""
+			&& ${gnomeColorMap[$color,$variant]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 		then
-			gnomeGetUserInput $color
+			gnomeGetUserInput $color $variant
 		fi
 	done
 fi
@@ -811,26 +824,31 @@ editionFormatColors () {
 }
 
 displayEdition () {
-	echo -e 'Edited Light New Dark New Neutral Neutral'
+	echo -e 'Edited Light New Dark New Neutral New'
 	declare -a validColors
 	colorsToFile="Gnome \nColor Light Dark Neutral \n"
 	size=${#gnomeNewColorMap[@]}
 	count=0
 	for color in ${editedColorArray[*]} 
 	do
-		for i in {0..2}
-		do
-			if [[ ${gnomeNewColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
-			then 
-				validColors[$i]=${gnomeNewColorMap[$color,$i]}
-				(( count++ ))
-			else 
-				validColors[$i]=$placeholder
-			fi
-		done
-		echo -ne "Parsing color code $count of $size"\\r 1>&2
-		colorsToFile+="\n$color ${validColors[0]} ${validColors[1]} ${validColors[2]}"
-		echo -e `editionFormatColors "$color" "${gnomeColorMap[$color,0]}" "${validColors[0]}" "${gnomeColorMap[$color,1]}" "${validColors[1]}" "${gnomeColorMap[$color,2]}" "${validColors[2]}"`
+		if [[ ${gnomeNewColorMap[$color,0]} =~ ^#[0-9A-Fa-f]{6}$ 
+			|| ${gnomeNewColorMap[$color,1]} =~ ^#[0-9A-Fa-f]{6}$
+			|| ${gnomeNewColorMap[$color,2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+		then
+			for i in {0..2}
+			do
+				if [[ ${gnomeNewColorMap[$color,$i]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+				then 
+					validColors[$i]=${gnomeNewColorMap[$color,$i]}
+					(( count++ ))
+				else 
+					validColors[$i]=$placeholder
+				fi
+			done
+			echo -ne "Parsing color code $count of $size"\\r 1>&2
+			colorsToFile+="\n$color ${validColors[0]} ${validColors[1]} ${validColors[2]}"
+			echo -e `editionFormatColors "$color" "${gnomeColorMap[$color,0]}" "${validColors[0]}" "${gnomeColorMap[$color,1]}" "${validColors[1]}" "${gnomeColorMap[$color,2]}" "${validColors[2]}"`
+		fi
 	done 
 	echo -e $colorsToFile | column -t >> $colorsFile
 }
@@ -847,6 +865,10 @@ replaceColor () {
 	then
 		sed -i "s/${gnomeColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$popOsColors
 		sed -i "s/${gnomeColorMap[$1,1]})/${gnomeNewColorMap[$1,1]})/g" $modDir$shellColors
+	fi
+	if [[ ${gnomeNewColorMap[$1,2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		sed -i "s/${gnomeColorMap[$1,2]};/${gnomeNewColorMap[$1,2]};/g" $modDir$popOsColors
 	fi
 }
 
@@ -927,12 +949,14 @@ gnomeToGTK () {
 		fi
 	fi	
 	if [[ ! ${gnomeNewColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ 
-		&& ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+		&& ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$
+		&& ${gtkColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		gtkGetUserInput $1 "0"
 	fi
 	if [[ ! ${gnomeNewColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ 
-		&& ! ${gnomeColorMap[$1,0]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+		&& ! ${gnomeColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$
+		&& ${gtkColorMap[$1,1]} =~ ^#[0-9A-Fa-f]{6}$ ]]
 	then
 		gtkGetUserInput $1 "1"
 	fi
@@ -946,7 +970,7 @@ do
 done
 
 gtkDisplayEdition () {
-	echo -e 'Edited Light New Dark New Neutral Neutral'
+	echo -e 'Edited Light New Dark New Neutral New'
 	declare -a validColors	
 	colorsToFile="GTK \nColor Light Dark Neutral \n"
 	size=${#gtkNewColorMap[@]}
@@ -983,6 +1007,10 @@ gtkReplaceColor () {
 		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkColors
 		sed -i "s/${gtkColorMap[$1,1]})/${gtkNewColorMap[$1,1]})/g" $modDir$gtkUbuntuColors
 	fi
+	if [[ ${gtkNewColorMap[$1,2]} =~ ^#[0-9A-Fa-f]{6}$ ]]
+	then
+		sed -i "s/${gtkColorMap[$1,2]};/${gtkNewColorMap[$1,2]};/g" $modDir$gtkPopOsColors
+	fi
 }
 
 echo -e "\nModified colors in GTK theme"
@@ -1003,7 +1031,7 @@ done
 
 sed -i "s/project('Pop'/project(\'$exportDir\'/g" "$modDir/meson.build"
 
-rm -r $exportDir
+[[ -d $exportDir ]] && rm -r $exportDir
 cp -r $modDir $exportDir
 
 # End of export
