@@ -1033,6 +1033,7 @@ sed -i "s/project('Pop'/project(\'$exportDir\'/g" "$modDir/meson.build"
 
 [[ -d $exportDir ]] && rm -r $exportDir
 cp -r $modDir $exportDir
+rm -r .modified_*
 
 # End of export
 
