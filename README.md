@@ -126,7 +126,7 @@ The following will apply colors from `Pop-Custom` to your new theme, let you edi
 The following will let you edit `Pop-Custom2`
 
 ```
-./pop_optimization.sh -u Pop-Custom2
+./pop_customization.sh -u Pop-Custom2
 ```
 
 ## Post installation
