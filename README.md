@@ -94,7 +94,7 @@ Please note that the script will need to compute and parse a TermX color code fo
 You fucked up your theme. Nothing is legible anymore, contrasts suck and you really need to revert whatever shit you've done. Fear not, and just type
 
 ```
-./pop_optimization.sh -r
+./pop_customization.sh -r
 ```
 
 Then restart your shell and the last theme you edited should be overwritten with Pop!_OS vanilla theme. You can use `-o NAME`if you want to overwrite a specific theme. 
@@ -108,7 +108,7 @@ Delete previously downloaded Pop!_OS reference theme and re-download it.
 The following will run the script with colors enabled, parse colors from reference theme, ask you if you want to modify them, let you edit colors, ask you if you want to install the resulting theme, ask you for a theme name then install it.
 
 ```
-./pop_optimization.sh -c
+./pop_customization.sh -c
 ```
 
 The following will run the script with colors enabled, start edition without asking you, let you edit colors and install the theme without asking you under the name `Pop-Custom` (the `Pop-` prefix is added by the script as a way to identify user themes). 
@@ -126,7 +126,7 @@ The following will apply colors from `Pop-Custom` to your new theme, let you edi
 The following will let you edit `Pop-Custom2`
 
 ```
-./pop_optimization.sh -u Pop-Custom2
+./pop_customization.sh -u Pop-Custom2
 ```
 
 ## Post installation
