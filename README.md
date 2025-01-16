@@ -1,3 +1,5 @@
+# /!\ I DO NOT MAINTAIN THIS ANYMMORE, FEEL FREE TO CLONE IT IF YOU WANT TO MAKE IT WORK /!\
+
 # POCSE (Pop OS Color Scheme Editor)
 > **A note of warning:** this script isn't a fully fledged theme editor, it's merely an attempt at simplifying the edition of Pop OS color scheme, initially only for my personal use. If you choose to use it, be aware that I am in no way responsible for you breaking the visual integrity of your OS.
 >
